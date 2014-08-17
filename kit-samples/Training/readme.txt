@@ -1,0 +1,1 @@
+This directory place KIT sequences using for training.

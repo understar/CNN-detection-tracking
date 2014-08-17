@@ -1,0 +1,1 @@
+This directory place sequences using for testing.

@@ -26,6 +26,7 @@ def is_max(x):
             return 0
 #: 一方面非最大（非最大不合适，会打散目标，只进行阈值化），另一方面去除孤立虚假响应
 # TODO: 大一点的step滑动尺寸，会不会更容易处理？
+# TODO: 使用形态学处理？
 def not_max(r_map, thre=0.9 ,k=3):
     assert (k%2)!=0, "Odd number needed for k!"
     global THRE

@@ -1,6 +1,9 @@
 __author__ = 'shuaiyi'
 
-'''make cuda-convnet batches from images in the input dir'''
+# make cuda-convnet batches from images in the input dir
+
+# usage: 
+#    convert to mid-features then used for training orientation network
 
 import os
 import sys
@@ -13,10 +16,10 @@ channels = 1
 
 def process(image):
     image = np.array(image)           # size x size x 3
-    if channels > 1:
+    if channels > 1: # color image
         image = np.rollaxis(image, 2)     # 3 x size x size
         image = image.reshape(-1)         # ...
-    elif channels == 1:
+    elif channels == 1: # gray image
         image = image.reshape(-1)
     return image
 

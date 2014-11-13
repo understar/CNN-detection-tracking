@@ -10,6 +10,11 @@ Created on Fri Oct 17 19:51:20 2014
 
 注意的问题：
 保证样本的采集的正确性; xy轴不要搞错了; 样本正确
+
+多尺度分割内容：
+我们需要破碎的分割，但是可以先不破碎分割的情况下，快速去除不需要的内容；
+在判断为车辆的区域合并后，再破碎分割
+
 @author: shuaiyi
 """
 import warnings
@@ -20,7 +25,7 @@ def customwarn(message, category, filename, lineno, file=None, line=None):
 
 warnings.showwarning = customwarn
 
-import os, sys
+import os, sys, math
 import cv2 #使用cv2的resize，实现图像的缩放
 import skimage.io as io #读写图像
 from skimage.color import rgb2gray
@@ -79,6 +84,12 @@ def getRegion(r, f): # raster feature
     c_pt = geo.Centroid()
     cx, cy = offset(r, c_pt.GetX(), c_pt.GetY())
     
+    l_x, r_x, d_y, u_y = geo.GetEnvelope() # 记录的是上下Y坐标，以及左右x坐标
+    env_w = r_x - l_x
+    env_h = u_y - d_y
+    max_len = math.sqrt(env_w**2 + env_h**2)
+    env_area = env_w * env_h
+    
     # sample size : 40
     w = h = 40
 
@@ -106,7 +117,7 @@ def getRegion(r, f): # raster feature
     img = r.ReadAsArray(cx ,cy , w, h)
     img = img.swapaxes(0,2).swapaxes(0,1)
     img = rgb2gray(img)
-    return img_as_ubyte(img.reshape((w,h,1))), (cx,cy,w,h)
+    return img_as_ubyte(img.reshape((w,h,1))), (cx,cy,w,h), max_len, env_area
     #io.imsave("segementation/%s_%s_%s_%s.png" % \
     #         (lu_offset_x, lu_offset_y, w, h), img)
     #tmp = cv2.imread("segementation/%s_%s_%s_%s.png" % \
@@ -121,13 +132,13 @@ net = DecafNet()
 # 读取栅格图像
 gdal.AllRegister()
 
-for i in range(65,112):
-    g_raster = gdal.Open('segmentation/MunichStreet03/MOS%s.tif'%i, gdal.GA_ReadOnly) # 与分割文件对应的原始栅格
+for i in range(83,112):
+    g_raster = gdal.Open('segmentation/MunichStreet04-scale5/MOS%s.tif'%i, gdal.GA_ReadOnly) # 与分割文件对应的原始栅格
     
-    print "Processing image segmentation/MunichStreet03/MOS%s.tif"%i
+    print "Processing image segmentation/MunichStreet04-scale5/MOS%s.tif"%i
     # 读取分割结果 shp 文件
     driver = ogr.GetDriverByName('ESRI Shapefile')
-    os.chdir("./segmentation/MunichStreet03")
+    os.chdir("./segmentation/MunichStreet04-scale5")
     fn = "MOS%s.shp"%i
     dataSource = driver.Open(fn, 1) # 需要读写
     os.chdir(os.path.dirname(__file__))
@@ -151,6 +162,14 @@ for i in range(65,112):
         fieldDefn = ogr.FieldDefn('env', ogr.OFTString)
         layer.CreateField(fieldDefn)
     
+    if not is_exist(layer, 'maxlen'):
+        fieldDefn = ogr.FieldDefn('maxlen', ogr.OFTReal)
+        layer.CreateField(fieldDefn)
+        
+    if not is_exist(layer, 'envarea'):
+        fieldDefn = ogr.FieldDefn('envarea', ogr.OFTReal)
+        layer.CreateField(fieldDefn)
+    
     numFeatures = layer.GetFeatureCount()
     print 'Total region count:', numFeatures
     
@@ -159,11 +178,13 @@ for i in range(65,112):
     TEST = False
     if TEST == True:
         feature = layer.GetNextFeature()
-        img, env = getRegion(g_raster, feature)
-        scores = net.classify(img, True)
+        img, env, maxlen, envarea = getRegion(g_raster, feature)
+        scores = net.classify(img, False)
         is_car = net.top_k_prediction(scores, 1)
         if is_car[1][0] == 'car':
-            feature.SetField("car", 1)
+            print "Woh...a car..."
+        raw_input("enter any character break:")
+        break
     else:
         # loop through the regions and predict them
         pbar = progressbar.ProgressBar(maxval=numFeatures).start()
@@ -172,7 +193,7 @@ for i in range(65,112):
         feature = layer.GetNextFeature()
         while feature:
             # 获取对应的图像样本
-            img, env= getRegion(g_raster, feature)
+            img, env, maxlen, envarea= getRegion(g_raster, feature)
 
             scores = net.classify(img, False)
             is_car = net.top_k_prediction(scores, 1)
@@ -181,6 +202,8 @@ for i in range(65,112):
                 feature.SetField("car", 1)
                 feature.SetField("value", float(is_car[0][0]))
                 feature.SetField("env", "%s,%s,%s,%s" % env)
+                feature.SetField("maxlen", maxlen)
+                feature.SetField("envarea", envarea)
             
             layer.SetFeature(feature) # 这一步可以用于保存修改
             pbar.update(cnt+1)

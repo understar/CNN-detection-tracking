@@ -15,8 +15,9 @@ import os,sys
 
 #sys.path.append(os.path.dirname(__file__))
 
-_KITNET_FILE = 'kitnet.decafnet.epoch19'
-_META_FILE = 'kitnet.decafnet.meta'
+#不能使用local层
+_KITNET_FILE = 'kitnet.epoch31'
+_META_FILE = 'batches.meta31'
 
 # This is a legacy flag specifying if the network is trained with vertically
 # flipped images, which does not hurt performance but requires us to flip

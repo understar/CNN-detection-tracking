@@ -132,13 +132,22 @@ net = DecafNet()
 # 读取栅格图像
 gdal.AllRegister()
 
-for i in range(83,112):
-    g_raster = gdal.Open('segmentation/MunichStreet04-scale5/MOS%s.tif'%i, gdal.GA_ReadOnly) # 与分割文件对应的原始栅格
+if len(sys.argv) != 5:
+    print "Usage: segement_detection.py path_image_folder path_shp_folder start end"
+    sys.exit()
+else:
+    image_folder = sys.argv[1]
+    shp_folder = sys.argv[2]
+    start = int(sys.argv[3])
+    end = int(sys.argv[4])
+
+for i in range(start, end):
+    g_raster = gdal.Open(image_folder+'/MOS%s.tif'%i, gdal.GA_ReadOnly) # 与分割文件对应的原始栅格
     
-    print "Processing image segmentation/MunichStreet04-scale5/MOS%s.tif"%i
+    print "Processing image " + image_folder+'/MOS%s.tif'%i
     # 读取分割结果 shp 文件
     driver = ogr.GetDriverByName('ESRI Shapefile')
-    os.chdir("./segmentation/MunichStreet04-scale5")
+    os.chdir(shp_folder)
     fn = "MOS%s.shp"%i
     dataSource = driver.Open(fn, 1) # 需要读写
     os.chdir(os.path.dirname(__file__))

@@ -5,10 +5,10 @@ pixel_size = 25
 NoData_value = -9999
 
 # Filename of input OGR file
-vector_fn = 'test.shp'
+vector_fn = 'segmentation/test.shp'
 
 # Filename of the raster Tiff that will be created
-raster_fn = 'test.tif'
+raster_fn = 'raster.tif'
 
 # Open the data source and read in the extent
 source_ds = ogr.Open(vector_fn)
@@ -24,5 +24,7 @@ band = target_ds.GetRasterBand(1)
 band.SetNoDataValue(NoData_value)
 
 # Rasterize
-# burn_value£¿
+# burn_value
 gdal.RasterizeLayer(target_ds, [1], source_layer, burn_values=[0])
+
+source_ds.Destory()

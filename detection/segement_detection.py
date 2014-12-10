@@ -29,6 +29,7 @@ import os, sys, math
 import cv2 #使用cv2的resize，实现图像的缩放
 import skimage.io as io #读写图像
 from skimage.color import rgb2gray
+from skimage.transform import resize
 from skimage.util import img_as_ubyte
 from sklearn.externals import joblib
 
@@ -92,6 +93,7 @@ def getRegion(r, f): # raster feature
     
     # sample size : 40
     w = h = 40
+    in_size = 40
 
     #print cx , cy, w, h
     if cx - w/2 >= 0 and cx + w/2 <= r.RasterXSize \
@@ -117,7 +119,8 @@ def getRegion(r, f): # raster feature
     img = r.ReadAsArray(cx ,cy , w, h)
     img = img.swapaxes(0,2).swapaxes(0,1)
     img = rgb2gray(img)
-    return img_as_ubyte(img.reshape((w,h,1))), (cx,cy,w,h), max_len, env_area
+    img = resize(img, (in_size, in_size), mode='wrap')
+    return img_as_ubyte(img.reshape((in_size, in_size,1))), (cx,cy,w,h), max_len, env_area
     #io.imsave("segementation/%s_%s_%s_%s.png" % \
     #         (lu_offset_x, lu_offset_y, w, h), img)
     #tmp = cv2.imread("segementation/%s_%s_%s_%s.png" % \

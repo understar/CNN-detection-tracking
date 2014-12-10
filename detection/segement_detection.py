@@ -189,7 +189,7 @@ for i in range(start, end):
         feature = layer.GetNextFeature()
         img, env, maxlen, envarea = getRegion(g_raster, feature)
         scores = net.classify(img, False)
-        is_car = net.top_k_prediction(scores, 1)
+        is_car = net.top_k_prediction(scores, 2)
         if is_car[1][0] == 'car':
             print "Woh...a car..."
         raw_input("enter any character break:")
@@ -205,14 +205,19 @@ for i in range(start, end):
             img, env, maxlen, envarea= getRegion(g_raster, feature)
 
             scores = net.classify(img, False)
-            is_car = net.top_k_prediction(scores, 1)
+            is_car = net.top_k_prediction(scores, 2)
             # print type(is_car[0][0])
             if is_car[1][0] == 'car':
                 feature.SetField("car", 1)
                 feature.SetField("value", float(is_car[0][0]))
-                feature.SetField("env", "%s,%s,%s,%s" % env)
-                feature.SetField("maxlen", maxlen)
-                feature.SetField("envarea", envarea)
+            else:
+                feature.SetField("car", 0)
+                feature.SetField("value", float(is_car[0][1]))
+            # 全部输出
+            
+            feature.SetField("env", "%s,%s,%s,%s" % env)
+            feature.SetField("maxlen", maxlen)
+            feature.SetField("envarea", envarea)
             
             layer.SetFeature(feature) # 这一步可以用于保存修改
             pbar.update(cnt+1)

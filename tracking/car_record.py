@@ -19,6 +19,9 @@ Created on Mon Dec 08 16:00:57 2014
 单元测试
 '''
 
+def modulus(vec):
+    return np.sqrt((vec*vec).sum())
+
 class Point:
     def __init__(self, x, y):
         self.X = x
@@ -26,6 +29,9 @@ class Point:
         
     def dist(self, pt2):
         return math.sqrt((self.X - pt2.X)**2 + (self.Y - pt2.Y)**2)
+        
+    def vec(self):
+        return np.array([self.X, self.Y])
         
     def __repr__(self):
         return '(%s,%s)'%(self.X, self.Y)
@@ -42,12 +48,14 @@ class Car:
         self.m_id = _id
         self.curr_xy = _loc
         self.step = step_t
+        self.interval = 1
         self.is_new = True
     
     def update(self, t1_xy, direction):
         self.curr_d = direction
         # 更新速度
-        self.curr_v = self.curr_xy.dist(t1_xy)/self.step
+        self.curr_v = (self.curr_xy.vec() - t1_xy.vec())/(self.step*self.interval)
+        #self.curr_v = self.curr_xy.dist(t1_xy)/self.step
         if not self.is_new:
             self.hist_v.append(self.curr_v)
         else:
@@ -55,6 +63,9 @@ class Car:
         
         self.hist_xy.append(self.curr_xy)
         self.curr_xy = t1_xy
+     
+    def dummy_update(self):
+        self.interval += 1
      
     def cost(self, t1_all):
         # 分为4种类型计算每一个点的cost
@@ -65,7 +76,7 @@ class Car:
      
     def __repr__(self):
         return "Now : Location (%s, %s), Speed (%s m/s), Direction (%s)." % \
-            (self.curr_xy.X, self.curr_xy.Y, self.curr_v, self.curr_d)
+            (self.curr_xy.X, self.curr_xy.Y, modulus(self.curr_v) , self.curr_d)
 
 # 单元测试
 class TestCar(unittest.TestCase):
@@ -75,7 +86,7 @@ class TestCar(unittest.TestCase):
     def test_update(self):
         self.m_car.update(Point(3,4),45)
         self.m_car.update(Point(6,8),45)
-        self.assertEqual(2.5, self.m_car.curr_v)
+        self.assertEqual(2.5, modulus(self.m_car.curr_v))
        
 if __name__ == '__main__':
     #m_car = Car(0, Point(0,0))

@@ -84,7 +84,9 @@ class DecafNet(object):
             images: the output of size (2 x 40 x 40 x 1)
         """
         if center_only:
-            return np.ascontiguousarray(image[np.newaxis,0:INPUT_DIM,0:INPUT_DIM,1], dtype=np.float32)
+            images = np.empty((1, INPUT_DIM, INPUT_DIM, 1),dtype=np.float32)
+            images[0] = images[0,::-1]
+            return images
         else:
             # TODO: 可以考虑增加多种变换版本 40*40 ，可以在外部重写，旋转版本、缩放版本
             images = np.empty((2, INPUT_DIM, INPUT_DIM, 1),
@@ -94,7 +96,7 @@ class DecafNet(object):
             images[1] = images[0,::-1]
             return images
     
-    def classify(self, image, center_only=False):
+    def classify(self, image, center_only=True):
         """Classifies an input image.
         
         Input:

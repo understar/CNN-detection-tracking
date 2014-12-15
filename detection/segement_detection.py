@@ -129,8 +129,10 @@ def getRegion(r, f): # raster feature
     #return resize(img, (256,256))
 
 # 加载 decaf 和 classifier
-from kitnet import DecafNet
-net = DecafNet()
+from kitnet import DecafNet as KitNet
+from kit_angle_net import DecafNet as AngleNet
+net = KitNet()
+angle = AngleNet()
 
 # 读取栅格图像
 gdal.AllRegister()
@@ -168,6 +170,10 @@ for i in range(start, end):
         
     if not is_exist(layer, 'value'):
         fieldDefn = ogr.FieldDefn('value', ogr.OFTReal)
+        layer.CreateField(fieldDefn)
+        
+    if not is_exist(layer, 'angle'):
+        fieldDefn = ogr.FieldDefn('angle', ogr.OFTReal)
         layer.CreateField(fieldDefn)
     
     if not is_exist(layer, 'env'):
@@ -213,6 +219,14 @@ for i in range(start, end):
             if is_car[1][0] == 'car':
                 feature.SetField("car", 1)
                 feature.SetField("value", float(is_car[0][0]))
+                
+                # TODO: 中心情况下记录最准确？确定最终位置的情况下再进行方向检查
+                car_conv3 = net.feature("conv3_cudanet_out")
+                mid_convs = car_conv3.reshape((car_conv3.shape[0],-1))
+                scores = angle.classify(mid_convs)
+                angles = angle.top_k_prediction(scores, 1)
+                feature.SetField("angle", int(angles[1][0]))
+                
             else:
                 feature.SetField("car", 0)
                 feature.SetField("value", float(is_car[0][1]))

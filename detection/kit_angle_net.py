@@ -69,30 +69,8 @@ class DecafNet(object):
                 predicted scores for the 360 classes.
         """
         return self._net.predict(data=images)['probs_cudanet_out']
-
-    @staticmethod
-    def oversample(image, center_only=False):
-        """Oversamples an image. Currently the indices are hard coded to the
-        source and the flipped one, a total of 2 images.
-
-        Input:
-            image: an image of size (2048 x 1) and has data type uint8.
-            center_only: if True, only return the center image (source).
-        Output:
-            images: the output of size (2 x 2048 x 1)
-        """
-        if center_only:
-            return np.ascontiguousarray(image[np.newaxis,0:INPUT_DIM,0:INPUT_DIM,1], dtype=np.float32)
-        else:
-            # TODO: 可以考虑增加多种变换版本 40*40 ，可以在外部重写，旋转版本、缩放版本
-            images = np.empty((2, INPUT_DIM, INPUT_DIM, 1),
-                              dtype=np.float32)
-            images[0] = image
-            # flipped version
-            images[1] = images[0,::-1]
-            return images
     
-    def classify(self, image, center_only=False):
+    def classify(self, images):
         """Classifies an input image.
         
         Input:
@@ -102,17 +80,6 @@ class DecafNet(object):
             scores: a numpy vector of size 2 containing the
                 predicted scores for the 2 classes.
         """
-        # first, extract the 40*40 center.
-        image = transform.scale_and_extract(transform.as_rgb(image), 40)
-        # convert to [0,255] float32
-        image = image.astype(np.float32) * 255.
-        if _KITNET_FLIP:
-            # Flip the image if necessary, maintaining the c_contiguous order
-            image = image[::-1, :].copy()
-        # subtract the mean
-        image -= self._data_mean
-        # oversample the images
-        images = DecafNet.oversample(image, center_only)
         predictions = self.classify_direct(images)# 预测一副影像的多个变化版本，取均值
         return predictions.mean(0)
 
@@ -145,14 +112,23 @@ class DecafNet(object):
 if __name__ == '__main__':
     """A simple demo showing how to run decafnet."""
     from decaf.util import smalldata, visualize
+    from kitnet import DecafNet as KitNet
+    
     logging.getLogger().setLevel(logging.INFO)
-    net = DecafNet()
-    #car = smalldata.car()
+    
+    kit_net = KitNet()
+    car = smalldata.car()
     # print car.shape
-    #car = car.reshape((INPUT_DIM,INPUT_DIM,1))
-    #scores = net.classify(car)
-    #print 'prediction:', net.top_k_prediction(scores, 1)
-    # TODO: fix pydot error syntax error in line 2 near ','
-    # TODO: next step: setup the deepviz to visualize
+    car = car.reshape((40,40,1))
+    scores = kit_net.classify(car)
+    print 'Is car ? prediction:', kit_net.top_k_prediction(scores, 1)
+    
+    car_conv3 = kit_net.feature("conv3_cudanet_out")
+    mid_convs = car_conv3.reshape((car_conv3.shape[0],-1))
+
     # visualize.draw_net_to_file(net._net, "decafnet.png") #bug!
     # print 'Network structure written to decafnet.png'
+    net = DecafNet()
+    scores = net.classify(mid_convs)
+    print 'Direction ? prediction:', net.top_k_prediction(scores, 5)
+    

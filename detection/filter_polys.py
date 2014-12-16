@@ -16,7 +16,7 @@ def filter_poly( inShapefile ,field_name_target ):
     inDataSource = inDriver.Open(inShapefile, 0)
     inLayer = inDataSource.GetLayer()
     
-    # 此处为过滤语句
+    # TODO: 此处为过滤语句,如何方便指导，方便调试
     # (Car = 1) AND (Value >= 0.8)
     inLayer.SetAttributeFilter("(Car = 1) AND (value >= 0.8)")
 
@@ -73,7 +73,6 @@ def filter_poly( inShapefile ,field_name_target ):
     outDataSource.Destroy()
 
 if __name__ == '__main__':
-
     if len( sys.argv ) < 2:
         print "[ ERROR ]: you need to pass at least one arg -- the field_names to include in output"
         sys.exit(1)

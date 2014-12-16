@@ -175,7 +175,11 @@ for i in range(start, end):
     if not is_exist(layer, 'angle'):
         fieldDefn = ogr.FieldDefn('angle', ogr.OFTReal)
         layer.CreateField(fieldDefn)
-    
+        
+    if not is_exist(layer, 'prob_angle'):
+        fieldDefn = ogr.FieldDefn('prob_angle', ogr.OFTReal)
+        layer.CreateField(fieldDefn)
+        
     if not is_exist(layer, 'env'):
         fieldDefn = ogr.FieldDefn('env', ogr.OFTString)
         layer.CreateField(fieldDefn)
@@ -226,6 +230,7 @@ for i in range(start, end):
                 scores = angle.classify(mid_convs)
                 angles = angle.top_k_prediction(scores, 1)
                 feature.SetField("angle", int(angles[1][0]))
+                feature.SetField("prob_angle", float(angles[0][0]))
                 
             else:
                 feature.SetField("car", 0)

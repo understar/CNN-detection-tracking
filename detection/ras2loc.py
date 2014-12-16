@@ -30,7 +30,7 @@ def ras2loc(input_raster):
     img = imread(input_raster)
     label_img = label(img)
     props = sme.regionprops(label_img)
-    return img
+    return props
     
 if __name__ == '__main__':
 
@@ -44,7 +44,7 @@ if __name__ == '__main__':
     # shp filter
     # shp 2 ranster
     
-    img = imread("segmentation/MS04/results20/MOS83.tif")
+    img = imread("segmentation/MS04/results20/MOS83.tif") # *255
     #img = skimage.img_as_bool(img)
     #convex = convex_hull_image(img)
     label_img = label(img)

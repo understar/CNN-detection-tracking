@@ -137,23 +137,29 @@ angle = AngleNet()
 # 读取栅格图像
 gdal.AllRegister()
 
-if len(sys.argv) != 5:
-    print "Usage: segement_detection.py path_image_folder path_shp_folder start end"
+if len(sys.argv) != 3:
+    print "Usage: segement_detection.py path_image_folder path_shp_folder"
     sys.exit()
 else:
     image_folder = sys.argv[1]
     shp_folder = sys.argv[2]
-    start = int(sys.argv[3])
-    end = int(sys.argv[4])
+    #start = int(sys.argv[3])
+    #end = int(sys.argv[4])
 
-for i in range(start, end):
-    g_raster = gdal.Open(image_folder+'/MOS%s.tif'%i, gdal.GA_ReadOnly) # 与分割文件对应的原始栅格
+shp_list = []
+for f in os.listdir(shp_folder):
+    if f[-3:] == "shp":
+        shp_list.append(f)
+
+for shp in shp_list:
+    name = shp[:-4]
+    g_raster = gdal.Open(image_folder+'/%s.tif'%name, gdal.GA_ReadOnly) # 与分割文件对应的原始栅格
     
-    print "Processing image " + image_folder+'/MOS%s.tif'%i
+    print "Processing image " + image_folder+'/%s.tif'%name
     # 读取分割结果 shp 文件
     driver = ogr.GetDriverByName('ESRI Shapefile')
     os.chdir(shp_folder)
-    fn = "MOS%s.shp"%i
+    fn = "%s.shp"%name
     dataSource = driver.Open(fn, 1) # 需要读写
     os.chdir(os.path.dirname(__file__))
     if dataSource is None: 

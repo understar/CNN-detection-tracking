@@ -9,7 +9,7 @@ Created on Thu Dec 11 15:37:10 2014
 from osgeo import ogr
 import os, sys
 
-def filter_poly( inShapefile ,field_name_target ):
+def filter_poly( inShapefile, field_name_target=[], prob_filter=0.8 ):
     # Get the input Layer
     # inShapefile = "~/DATA/SHAPES/KC_ADMIN/parcel_address/parcel_address.shp"
     inDriver = ogr.GetDriverByName("ESRI Shapefile")
@@ -18,10 +18,11 @@ def filter_poly( inShapefile ,field_name_target ):
     
     # TODO: 此处为过滤语句,如何方便指导，方便调试
     # (Car = 1) AND (Value >= 0.8)
-    inLayer.SetAttributeFilter("(Car = 1) AND (value >= 0.8)")
+    inLayer.SetAttributeFilter("(Car = 1) AND (value >= %s)"%prob_filter)
 
     # Create the output LayerS
-    outShapefile = os.path.join( os.path.split( inShapefile )[0], "out_" + os.path.split( inShapefile )[1] )
+    outShapefile = os.path.join( os.path.split( inShapefile )[0], 
+                                "%sout_"%int(prob_filter*100) + os.path.split(inShapefile)[1] )
     outDriver = ogr.GetDriverByName("ESRI Shapefile")
 
     # Remove output shapefile if it already exists
@@ -73,8 +74,8 @@ def filter_poly( inShapefile ,field_name_target ):
     outDataSource.Destroy()
 
 if __name__ == '__main__':
-    if len( sys.argv ) < 2:
-        print "[ ERROR ]: you need to pass at least one arg -- the field_names to include in output"
+    if len( sys.argv ) < 3:
+        print "[ ERROR ]: you need to pass at least two arg --input shp  --prob filter"
         sys.exit(1)
 
-    filter_poly( sys.argv[1], sys.argv[2:] )
+    filter_poly( sys.argv[1], prob_filter=float(sys.argv[2]) )

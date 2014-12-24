@@ -12,4 +12,6 @@ REM for /l %%i in (62,1,68) do poly2ras.py ./segmentation/MA01/results5/95out_ON
 
 :将分割结果导出位置，面积及方向等
 for /l %%i in (62,1,68) do ras2loc.py ./segmentation/MA01/ON00%%i.tif ./segmentation/MA01/results5/95out_ON00%%i.tif
+
+REM ras2loc.py ./segmentation/MA01/ON0062.tif ./segmentation/MA01/results5/95out_ON0062.tif
 pause

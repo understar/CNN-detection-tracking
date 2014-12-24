@@ -15,8 +15,8 @@ import os,sys
 #sys.path.append(os.path.dirname(__file__))
 
 # angle training model
-_KITNET_FILE = 'kitanglenet.epoch41'
-_META_FILE = 'anglebatches.meta41'
+_KITNET_FILE = 'kitanglenet.epoch350'#'kitanglenet.41'
+_META_FILE = 'anglebatches.meta350'
 
 # This is a legacy flag specifying if the network is trained with vertically
 # flipped images, which does not hurt performance but requires us to flip
@@ -68,7 +68,7 @@ class DecafNet(object):
             scores: a numpy array of size (num x 360) containing the
                 predicted scores for the 360 classes.
         """
-        return self._net.predict(data=images)['probs_cudanet_out']
+        return self._net.predict(data=images)['probs_cudanet_out'] #'fc1_cudanet_out'
     
     def classify(self, images):
         """Classifies an input image.
@@ -130,5 +130,5 @@ if __name__ == '__main__':
     # print 'Network structure written to decafnet.png'
     net = DecafNet()
     scores = net.classify(mid_convs)
-    print 'Direction ? prediction:', net.top_k_prediction(scores, 5)
+    print 'Direction ? prediction:',  net.top_k_prediction(scores, 5)#scores*180 
     

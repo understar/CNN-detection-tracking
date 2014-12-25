@@ -53,13 +53,14 @@ def refilter(props, input_src):
         cy = int((bbox[1]+bbox[3])/2)
         cx = int((bbox[0]+bbox[2])/2)        
         k_n = 5 # 5*5
-        angles = []
-        probs = []
+        angles = np.zeros((k_n,k_n))
+        probs = np.zeros((k_n,k_n))
         for i in np.arange(-int(k_n/2),int(k_n/2)+1):
             for j in np.arange(-int(k_n/2),int(k_n/2)+1):
-                cx = cx + i
-                cy = cy + j
-                min_row, max_row, min_col, max_col = cx-_WIDTH/2, cx+_WIDTH/2, cy-_WIDTH/2, cy+_WIDTH/2
+                x = cx + i
+                y = cy + j
+                min_row, max_row, min_col, max_col = \
+                    x-_WIDTH/2, x+_WIDTH/2, y-_WIDTH/2, y+_WIDTH/2
                 # print min_row, max_row, min_col, max_col
 
                 img = input_src[min_row:max_row, min_col:max_col, :]
@@ -75,9 +76,12 @@ def refilter(props, input_src):
                     if angle == None:
                         continue
                     else:
-                        angles.append(angle[0])
-                        probs.append(angle[1])
-        if 0 != len(angles) and 0 != len(probs):
+                        angles[i+int(k_n/2),j+int(k_n/2)] = angle[0]
+                        probs[i+int(k_n/2),j+int(k_n/2)] = angle[1]
+        # TODO: 根据检测为Car的结果所占的比例过滤
+        ratio = float(np.count_nonzero(angles))/float(k_n*k_n)
+        print ratio
+        if ratio > 0: #len(angles) != 0:
             results.append((oid, cx, cy, area, angles, img, probs))
     return results
 
@@ -85,7 +89,8 @@ def Cal_Angle(img, detection_net=_DETECTION, angle_net=_ANGLE):
     scores = detection_net.classify(img, False)
     is_car = detection_net.top_k_prediction(scores, 1)
     print is_car
-    if is_car[1][0] == 'car':
+    if is_car[1][0] == 'car' and is_car[0][0] >= 0.95: 
+        # prob filter 0.95会不会太严格
         car_conv3 = detection_net.feature("conv3_cudanet_out")
         mid_convs = car_conv3.reshape((car_conv3.shape[0],-1))
         scores = angle_net.classify(mid_convs)

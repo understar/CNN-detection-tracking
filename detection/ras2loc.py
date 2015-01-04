@@ -7,6 +7,7 @@ Created on Thu Dec 11 16:41:58 2014
 import matplotlib.pyplot as plt
 import os, sys
 import numpy as np
+from scipy.stats import itemfreq
 # import pandas as pd
 import skimage
 import skimage.measure as sme
@@ -20,12 +21,50 @@ from skimage.morphology import erosion, dilation, opening, closing
 from filter_polys import filter_poly # filter
 from poly2ras import poly_ras # to raster
 
-from kitnet import DecafNet as KitNet
 from kit_angle_net import DecafNet as AngleNet
 
-_DETECTION = KitNet()
+_DETECTION = None
 _ANGLE = AngleNet()
 _WIDTH = 40
+
+Decaf = False
+if Decaf:
+    from kitnet import DecafNet as KitNet
+    _DETECTION = KitNet()
+else:
+    os.chdir("E:/2013/cuda-convnet/trunk")
+    from show_pred import model as car_model
+    _DETECTION = car_model
+    os.chdir(os.path.dirname(os.path.realpath(__file__)))
+
+def Cal_Angle(img, detection_net=_DETECTION, angle_net=_ANGLE):
+    # TODO: prob filter 0.95会不会太严格
+    if Decaf:
+        scores = detection_net.classify(img, False)
+        is_car = detection_net.top_k_prediction(scores, 1)
+        #print is_car
+        if is_car[1][0] == 'car' and is_car[0][0] >= 0.9:
+            car_conv3 = detection_net.feature("conv3_neuron_cudanet_out")
+            mid_convs = car_conv3.reshape((car_conv3.shape[0],-1))
+            scores = angle_net.classify(mid_convs)
+            angles = angle_net.top_k_prediction(scores, 3)
+            
+            o = float(angles[1][0])-90 # *180/np.pi
+            o = o if o>0 else o+360        
+            return int(o), is_car[0][0]
+    else:
+        is_car = car_model.show_predictions(img[:,:,0])
+        print is_car
+        if is_car[-1][0] == 'car' and is_car[-1][1] >= 0.9:
+            mid_convs = car_model.get_features(img[:,:,0])
+            scores = angle_net.classify(mid_convs)
+            angles = angle_net.top_k_prediction(scores, 3)
+            #print angles
+            
+            o = float(angles[1][0])-90 # *180/np.pi
+            o = o if o>0 else o+360        
+            return int(o), is_car[-1][1]
+    return None
 
 def plot_comparison(original, filtered, filter_name):
     fig, (ax1, ax2) = plt.subplots(ncols=2, figsize=(8, 4))
@@ -51,7 +90,7 @@ def refilter(props, input_src):
         area = r.area
         # TODO: 检测一副远远不够，在附近多检测几张
         cy = int((bbox[1]+bbox[3])/2)
-        cx = int((bbox[0]+bbox[2])/2)        
+        cx = int((bbox[0]+bbox[2])/2)
         k_n = 5 # 5*5
         angles = np.zeros((k_n,k_n))
         probs = np.zeros((k_n,k_n))
@@ -67,7 +106,7 @@ def refilter(props, input_src):
                 if img.shape != (_WIDTH, _WIDTH, 3):
                     continue
                 else:
-                    #imsave("%s_%s.png"%(cx,cy), img)
+                    # imsave("%s_%s.png"%(cx,cy), img)
                     # print img.shape
                     img = rgb2gray(img)
                     # print img.shape
@@ -78,35 +117,32 @@ def refilter(props, input_src):
                     else:
                         angles[i+int(k_n/2),j+int(k_n/2)] = angle[0]
                         probs[i+int(k_n/2),j+int(k_n/2)] = angle[1]
-        # TODO: 根据检测为Car的结果所占的比例过滤
+        # TODO: 根据检测为Car的结果所占的比例过滤? 多大比例合适
+        # 确实可以过滤一部分
         ratio = float(np.count_nonzero(angles))/float(k_n*k_n)
         print ratio
-        if ratio > 0: #len(angles) != 0:
-            results.append((oid, cx, cy, area, angles, img, probs))
+        if ratio > 0.9: #len(angles) != 0:
+            results.append((oid, cx, cy, area, angles, img, probs, ratio))
     return results
 
-def Cal_Angle(img, detection_net=_DETECTION, angle_net=_ANGLE):
-    scores = detection_net.classify(img, False)
-    is_car = detection_net.top_k_prediction(scores, 1)
-    print is_car
-    if is_car[1][0] == 'car' and is_car[0][0] >= 0.95: 
-        # prob filter 0.95会不会太严格
-        car_conv3 = detection_net.feature("conv3_cudanet_out")
-        mid_convs = car_conv3.reshape((car_conv3.shape[0],-1))
-        scores = angle_net.classify(mid_convs)
-        angles = angle_net.top_k_prediction(scores, 1)
-        return int(angles[1][0]), is_car[0][0]
-    else:
-        return None
+def Avg_angle(nn):
+    #TODO: 通过邻域角度取众数？如何分析邻域得到角度
+    # 如果有多个众数的情况？目前区第一个
+    freq=itemfreq(nn.ravel())
+    max_count = freq.max(0)[1]
+    for i in range(freq.shape[0]):
+        if freq[i,1] == max_count:
+            return freq[i,0]
     
+
 def writeprops(props, fname):
     with open(fname, 'w') as f:
         f.writelines(['id,', 'x,', 'y,', 'area,', 'angle', '\n'])
         for r in props:
             #if r[6] == 1:
             f.writelines(["%s,"%r[0], "%s,"%r[1], "%s,"%r[2],
-                          "%s,"%r[3], "%s"%r[4] , "%s"%r[6] ,'\n'])
-            skimage.io.imsave(fname[:-4]+"_%s.png"%r[0], r[5])
+                          "%s,"%r[3], "%s"%Avg_angle(r[4]) ,'\n']) #, "%s"%r[6] 
+            skimage.io.imsave(fname[:-4]+"_%s_%s.png"%(r[0], 100*r[7]), r[5])
     
 if __name__ == '__main__':
     # load shp

@@ -8,6 +8,7 @@ conv、fc、cmrnorm、neuron、pool、softmax
 """
 import cPickle as pickle
 from decaf.util import translator, transform
+from skimage.io import imread
 import logging
 import numpy as np
 import os,sys
@@ -15,8 +16,8 @@ import os,sys
 #sys.path.append(os.path.dirname(__file__))
 
 # angle training model
-_KITNET_FILE = 'kitanglenet.epoch350'#'kitanglenet.41'
-_META_FILE = 'anglebatches.meta350'
+_KITNET_FILE = '400.906'#'kitanglenet.epoch350'#'kitanglenet.41'
+_META_FILE = '400.906.meta'
 
 # This is a legacy flag specifying if the network is trained with vertically
 # flipped images, which does not hurt performance but requires us to flip
@@ -65,7 +66,7 @@ class DecafNet(object):
                 float32, c_contiguous, and has the mean subtracted and the
                 image flipped if necessary.
         Output:
-            scores: a numpy array of size (num x 360) containing the
+            scores: a numpy array of size (num x 360) "E:/2013/cuda-convnet/trunk"containing the
                 predicted scores for the 360 classes.
         """
         return self._net.predict(data=images)['probs_cudanet_out'] #'fc1_cudanet_out'
@@ -112,20 +113,35 @@ class DecafNet(object):
 if __name__ == '__main__':
     """A simple demo showing how to run decafnet."""
     from decaf.util import smalldata, visualize
-    from kitnet import DecafNet as KitNet
-    
     logging.getLogger().setLevel(logging.INFO)
     
-    kit_net = KitNet()
-    car = smalldata.car()
-    # print car.shape
-    car = car.reshape((40,40,1))
-    scores = kit_net.classify(car)
-    print 'Is car ? prediction:', kit_net.top_k_prediction(scores, 1)
+    if len(sys.argv) == 1:
+        car = smalldata.car()
+    else:
+        print "Using " + sys.argv[1]
+        car = imread(sys.argv[1])
     
-    car_conv3 = kit_net.feature("conv3_cudanet_out")
-    mid_convs = car_conv3.reshape((car_conv3.shape[0],-1))
-
+    Decaf = False
+    if Decaf:
+        from kitnet import DecafNet as KitNet
+        kit_net = KitNet()
+    
+        # print car.shape
+        car = car.reshape((40,40,1))
+        scores = kit_net.classify(car)
+        print 'Is car ? prediction:', kit_net.top_k_prediction(scores, 1)
+        
+        car_conv3 = kit_net.feature("conv3_neuron_cudanet_out") #conv3_cudanet_out
+        mid_convs = car_conv3.reshape((car_conv3.shape[0],-1))
+    else:
+        os.chdir("E:/2013/cuda-convnet/trunk")
+        # sys.path.append("E:/2013/cuda-convnet/trunk")
+        from show_pred import model as car_model
+        scores = car_model.show_predictions(car)
+        print 'Is car ? prediction:', scores[-1]
+        
+        mid_convs = car_model.get_features(car)
+        os.chdir(os.path.dirname(os.path.realpath(__file__)))
     # visualize.draw_net_to_file(net._net, "decafnet.png") #bug!
     # print 'Network structure written to decafnet.png'
     net = DecafNet()

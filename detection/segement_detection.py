@@ -130,9 +130,9 @@ def getRegion(r, f): # raster feature
 
 # 加载 decaf 和 classifier
 from kitnet import DecafNet as KitNet
-from kit_angle_net import DecafNet as AngleNet
+#from kit_angle_net import DecafNet as AngleNet
 net = KitNet()
-angle = AngleNet()
+#angle = AngleNet()
 
 # 读取栅格图像
 gdal.AllRegister()
@@ -178,13 +178,13 @@ for shp in shp_list:
         fieldDefn = ogr.FieldDefn('value', ogr.OFTReal)
         layer.CreateField(fieldDefn)
         
-    if not is_exist(layer, 'angle'):
-        fieldDefn = ogr.FieldDefn('angle', ogr.OFTReal)
-        layer.CreateField(fieldDefn)
-        
-    if not is_exist(layer, 'prob_angle'):
-        fieldDefn = ogr.FieldDefn('prob_angle', ogr.OFTReal)
-        layer.CreateField(fieldDefn)
+#    if not is_exist(layer, 'angle'):
+#        fieldDefn = ogr.FieldDefn('angle', ogr.OFTReal)
+#        layer.CreateField(fieldDefn)
+#        
+#    if not is_exist(layer, 'prob_angle'):
+#        fieldDefn = ogr.FieldDefn('prob_angle', ogr.OFTReal)
+#        layer.CreateField(fieldDefn)
         
     if not is_exist(layer, 'env'):
         fieldDefn = ogr.FieldDefn('env', ogr.OFTString)
@@ -231,12 +231,12 @@ for shp in shp_list:
                 feature.SetField("value", float(is_car[0][0]))
                 
                 # TODO: 中心情况下记录最准确？确定最终位置的情况下再进行方向检查
-                car_conv3 = net.feature("conv3_cudanet_out")
-                mid_convs = car_conv3.reshape((car_conv3.shape[0],-1))
-                scores = angle.classify(mid_convs)
-                angles = angle.top_k_prediction(scores, 1)
-                feature.SetField("angle", int(angles[1][0]))
-                feature.SetField("prob_angle", float(angles[0][0]))
+                #car_conv3 = net.feature("conv3_cudanet_out")
+                #mid_convs = car_conv3.reshape((car_conv3.shape[0],-1))
+                #scores = angle.classify(mid_convs)
+                #angles = angle.top_k_prediction(scores, 1)
+                #feature.SetField("angle", int(angles[1][0]))
+                #feature.SetField("prob_angle", float(angles[0][0]))
                 
             else:
                 feature.SetField("car", 0)

@@ -38,34 +38,44 @@ class Point:
 
 # Tracking Record
 class Car:
-    hist_xy = list()
-    hist_v = list()
-    curr_v = 0
-    curr_d = None
-    curr_xy = None
-    m_id = None
-    def __init__(self, _id, _loc, step_t = 2.0):
-        self.m_id = _id
+    _id_ = 0
+    def __init__(self, _loc, template = None, direction=None, step_t = 2.0):
+        self.hist_xy = list()
+        self.hist_v = list()
+        self.curr_v = 0
+        self.curr_d = direction # 新建的时候，第一次direction是模型估计值
+
+        self.m_id = Car._id_
+        Car._id_ += 1 # 类内全局变量？
         self.curr_xy = _loc
         self.step = step_t
         self.interval = 1
         self.is_new = True
+        self.template = template
     
     def update(self, t1_xy, direction):
-        self.curr_d = direction
-        # 更新速度
-        self.curr_v = (self.curr_xy.vec() - t1_xy.vec())/(self.step*self.interval)
-        #self.curr_v = self.curr_xy.dist(t1_xy)/self.step
-        if not self.is_new:
-            self.hist_v.append(self.curr_v)
+        """更新车辆，需要对那些速度为零，基本不动的车辆进行特殊处理
+        """
+        if self.curr_xy.dist(t1_xy) < 15: # 差不多是车辆的大小
+            self.curr_d = direction
         else:
-            self.is_new = False
+            self.curr_d = direction
+            # 更新速度
+            self.curr_v = (self.curr_xy.vec() - t1_xy.vec())/(self.step*self.interval)
+            #self.curr_v = self.curr_xy.dist(t1_xy)/self.step
+            if not self.is_new:
+                self.hist_v.append(self.curr_v)
+            else:
+                self.is_new = False
         
         self.hist_xy.append(self.curr_xy)
         self.curr_xy = t1_xy
      
     def dummy_update(self):
-        self.interval += 1
+        if self.interval>2:
+            self.dad = True
+        else:
+            self.interval += 1
      
     def cost(self, t1_all):
         # 分为4种类型计算每一个点的cost
@@ -75,18 +85,22 @@ class Car:
         pass
      
     def __repr__(self):
-        return "Now : Location (%s, %s), Speed (%s m/s), Direction (%s)." % \
-            (self.curr_xy.X, self.curr_xy.Y, modulus(self.curr_v) , self.curr_d)
+        if self.is_new:
+            return "New Tracking: Initial Location (%s, %s)." % \
+                (self.curr_xy.X, self.curr_xy.Y)
+        else:
+            return "Now : Location (%s, %s), Speed (%s m/s), Direction (%s)." % \
+                (self.curr_xy.X, self.curr_xy.Y, modulus(self.curr_v) , self.curr_d)
 
 # 单元测试
 class TestCar(unittest.TestCase):
     def setUp(self):
-        self.m_car = Car(0, Point(0,0))
+        self.m_car = Car(Point(0,0))
 
     def test_update(self):
-        self.m_car.update(Point(3,4),45)
-        self.m_car.update(Point(6,8),45)
-        self.assertEqual(2.5, modulus(self.m_car.curr_v))
+        self.m_car.update(Point(30,40),45)
+        self.m_car.update(Point(60,80),45)
+        self.assertEqual(25, modulus(self.m_car.curr_v))
        
 if __name__ == '__main__':
     #m_car = Car(0, Point(0,0))

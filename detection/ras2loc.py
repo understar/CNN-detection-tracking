@@ -13,7 +13,7 @@ import skimage
 import skimage.measure as sme
 from skimage.io import imread, imsave
 from skimage.color import rgb2gray
-from skimage.morphology import label
+from skimage.morphology import label, square
 
 from skimage.morphology import erosion, dilation, opening, closing
 # white_tophat, black_tophat, skeletonize
@@ -32,7 +32,10 @@ if Decaf:
     from kitnet import DecafNet as KitNet
     _DETECTION = KitNet()
 else:
+    #print os.getcwd()
     os.chdir("E:/2013/cuda-convnet/trunk")
+    sys.path.append(".")
+    #print os.getcwd()
     from show_pred import model as car_model
     _DETECTION = car_model
     os.chdir(os.path.dirname(os.path.realpath(__file__)))
@@ -127,12 +130,16 @@ def refilter(props, input_src):
 
 def Avg_angle(nn):
     #TODO: 通过邻域角度取众数？如何分析邻域得到角度
-    # 如果有多个众数的情况？目前区第一个
+    # 如果有多个众数的情况？目前取第一个
+    # 角度包含更多的信息，如果邻域检测不一致性较差的情况
     freq=itemfreq(nn.ravel())
     max_count = freq.max(0)[1]
-    for i in range(freq.shape[0]):
-        if freq[i,1] == max_count:
-            return freq[i,0]
+    if float(max_count)/float(nn.size) < 0.5: # 如果一致的角度数量少于一半，就搞死掉
+        return None
+    else:
+        for i in range(freq.shape[0]):
+            if freq[i,1] == max_count:
+                return freq[i,0]
     
 
 def writeprops(props, fname):
@@ -140,9 +147,11 @@ def writeprops(props, fname):
         f.writelines(['id,', 'x,', 'y,', 'area,', 'angle', '\n'])
         for r in props:
             #if r[6] == 1:
-            f.writelines(["%s,"%r[0], "%s,"%r[1], "%s,"%r[2],
-                          "%s,"%r[3], "%s"%Avg_angle(r[4]) ,'\n']) #, "%s"%r[6] 
-            skimage.io.imsave(fname[:-4]+"_%s_%s.png"%(r[0], 100*r[7]), r[5])
+            angle = Avg_angle(r[4])
+            if angle != None:
+                f.writelines(["%s,"%r[0], "%s,"%r[1], "%s,"%r[2],
+                              "%s,"%r[3], "%s"%angle ,'\n']) #, "%s"%r[6] 
+                #skimage.io.imsave(fname[:-4]+"_%s_%s.png"%(r[0], 100*r[7]), r[5])
     
 if __name__ == '__main__':
     # load shp
@@ -154,6 +163,8 @@ if __name__ == '__main__':
         
     src = imread(sys.argv[1])
     img = imread(sys.argv[2]) # *255
+    #形态学操作
+    #opening(src, square(5))
     #img = skimage.img_as_bool(img)
     #convex = convex_hull_image(img)
     props = ras2loc(img, src)

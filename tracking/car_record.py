@@ -52,6 +52,7 @@ class Car:
         self.interval = 1
         self.is_new = True
         self.template = template
+        self.dad = False
     
     def update(self, t1_xy, direction):
         """更新车辆，需要对那些速度为零，基本不动的车辆进行特殊处理

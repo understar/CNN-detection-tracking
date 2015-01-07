@@ -122,7 +122,7 @@ def c_p(car_t, pt_t1):
         r_hat = modulus(car_t.curr_xy.vec() + car_t.interval * car_t.curr_v - pt_t1.vec())
         return 1 - r_hat / search_r
     else:
-        return 1 - car_t.curr_xy.dist(pt_t1)/search_r
+        return 1 - car_t.curr_xy.dist(pt_t1)/(search_r) #/car_t.interval
 
 def c_v(car_t, pt_t1):
     """ 计算当前车辆与目标点之间Cv权重(角度变化导致的权重变化)
@@ -145,7 +145,7 @@ def c_v(car_t, pt_t1):
         if np.isnan(cos_angle):
             cos_angle = 1
         # print cos_angle, v_t, v_t1
-        return 0.5 + 0.5*abs(cos_angle) # 不管正负方向一致就行，初始的时候是这样的
+        return 0.5 + 0.5*abs(cos_angle) #不管正负方向一致就行，初始的时候是这样的
 
 def cost(car_t, pt_t1, pt_img):
     cost1, result= c_match(car_t, pt_t1, pt_img) # 模板匹配
@@ -153,7 +153,7 @@ def cost(car_t, pt_t1, pt_img):
     cost3 = c_p(car_t, pt_t1) # 距离
     
     # 控制cost1 2 3 之间的比重
-    if cost2 > 0.5: # 角度严重不符合，不予考虑
+    if cost2 > 0.5 and cost3 > 0: # 角度严重不符合，不予考虑
         alpha = 0.5
         beta = 0.2
         return (alpha*cost1+beta*cost2+(1-alpha-beta)*cost3), cost1, cost2, cost3

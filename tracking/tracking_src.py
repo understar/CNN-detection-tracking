@@ -71,7 +71,7 @@ for line in lines[1:]:
     xc = float(xc)
     yc = float(yc)
     o = float(o)
-    car_list.append(Car(Point(xc,h-yc), img[yc-20:yc+20,xc-20:xc+20,:], o))
+    car_list.append(Car(Point(xc,h-yc), img[yc-20:yc+20,xc-20:xc+20,:], o, int(oid)))
     plt.scatter(xc, yc) # 注意绘制图片的坐标系和笛卡尔坐标系的区别
     # objs.append((xc, yc, o))
 plt.show()
@@ -88,33 +88,29 @@ for f in frames[1:]:
         yc = float(yc)
         o = float(o)
         target_pt = {}
-        if img1[yc-30:yc+30,xc-30:xc+30,:].shape == (60,60,3):
-            target_pat['id'] = oid
-            target_pt['loc'] = Point(xc, h-yc)
-            target_pt['direction'] = o
-            target_pt['img'] = img1[yc-30:yc+30,xc-30:xc+30,:]
-            pts.append(target_pt)
+        target_pt['id'] = int(oid)
+        target_pt['loc'] = Point(xc, h-yc)
+        target_pt['direction'] = o
+        pts.append(target_pt)
     
     # 现在更新，没有匹配上的car假更新一下；匹配上的更新模板；位置;
     # 目标点集中如果没有被匹配上的添加新Car
     label_pts = np.zeros((len(pts)))
     label_car = np.zeros((len(car_list)))
-    for pt in pts:
-        if pts[j]['loc'] != None and cost_arr[i,j] != 1:
-            car_list[i].update(pts[j]['loc'], pts[j]['direction'])
-            xc, yc = pts[j]['loc'].X, pts[j]['loc'].Y
-            yc = h - yc
-            car_list[i].template = img1[yc-20:yc+20,xc-20:xc+20,:]
-            label_pts[j] = 1
-        else:
-            car_list[i].dummy_update()
-            # print '(%d, %d)->%f' % (car_list[i].m_id, j, cost_arr[i,j])
+    for i in range(len(car_list)):
+        for j in range(len(pts)):
+            if pts[j]['id'] == car_list[i].oid:
+                car_list[i].update(pts[j]['loc'], pts[j]['direction'])
+                xc, yc = pts[j]['loc'].X, pts[j]['loc'].Y
+                yc = h - yc
+                car_list[i].template = img1[yc-20:yc+20,xc-20:xc+20,:]
+                label_pts[j] = 1
     
     for pt, label in zip(pts, label_pts):
         if label == 0 and pt['loc'] != None:
             xc, yc = pt['loc'].X, pt['loc'].Y
             yc = h - yc
-            car_list.append(Car(Point(xc,h-yc), img1[yc-20:yc+20,xc-20:xc+20,:], pt['direction']))
+            car_list.append(Car(Point(xc,h-yc), img1[yc-20:yc+20,xc-20:xc+20,:], pt['direction'], pt['id']))
             
 print "================== show and save =============================="
 #plt.figure()
@@ -136,12 +132,12 @@ for car in car_list:
     for pos in car.hist_xy:
         X.append(pos.X)
         Y.append(h-pos.Y)
-    X.append(car.curr_xy.X)
-    Y.append(h-car.curr_xy.Y)
+    #X.append(car.curr_xy.X)
+    #Y.append(h-car.curr_xy.Y)
     plt.plot(X, Y, '-') #marker="o", markerfacecolor="r")
     if len(X) != 0:
         plt.annotate(str(car.m_id),(X[-1], Y[-1]))
 plt.show()    
     
 import cPickle as pkl
-pkl.dump(car_list, file('track.pkl','wb'))
+pkl.dump(car_list, file('track_src.pkl','wb'))

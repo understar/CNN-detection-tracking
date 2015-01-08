@@ -39,7 +39,7 @@ class Point:
 # Tracking Record
 class Car:
     _id_ = 0
-    def __init__(self, _loc, template = None, direction=None, step_t = 2.0):
+    def __init__(self, _loc, template = None, direction=None, oid=None, step_t = 2.0):
         self.hist_xy = list()
         self.hist_v = list()
         self.curr_v = 0
@@ -53,6 +53,7 @@ class Car:
         self.is_new = True
         self.template = template
         self.dad = False
+        self.oid = oid
     
     def update(self, t1_xy, direction):
         """更新车辆，需要对那些速度为零，基本不动的车辆进行特殊处理

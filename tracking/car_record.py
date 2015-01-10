@@ -65,10 +65,11 @@ class Car:
             # 更新速度
             self.curr_v = (self.curr_xy.vec() - t1_xy.vec())/(self.step*self.interval)
             #self.curr_v = self.curr_xy.dist(t1_xy)/self.step
-            if not self.is_new:
-                self.hist_v.append(self.curr_v)
-            else:
-                self.is_new = False
+        
+        if not self.is_new:
+            self.hist_v.append(self.curr_v)
+        else:
+            self.is_new = False
         
         self.hist_xy.append(self.curr_xy)
         self.curr_xy = t1_xy

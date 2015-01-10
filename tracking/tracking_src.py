@@ -17,6 +17,16 @@ import matplotlib.pyplot as plt
 from sklearn.neighbors import KDTree
 
 
+def save_v(car_list, fname):
+    with file(fname, 'w') as f:
+        f.writelines(['x,y,v\n'])
+        for car in car_list:
+            if 0 != len(car.hist_xy):
+                f.writelines(['%s,'%car.curr_xy.X, '%s,'%car.curr_xy.Y, \
+                            '%s\n'%(modulus(car.curr_xy.vec() - \
+                            car.hist_xy[-1].vec())/(car.interval*car.step))])
+        
+
 def show_detection(img_path, csv):
     plt.figure()
     lines = file(csv,'r').readlines()
@@ -45,6 +55,29 @@ def show_track(img, car):
     if len(X) != 0:
         plt.annotate(str(car.m_id),(X[-1], Y[-1]))
     plt.show()
+
+def show_all(img, car_list, syms, labels):
+    plt.figure()
+    plt.imshow(img)
+    for car, sym, l in zip(car_list, syms, labels):
+        X = []
+        Y = []
+        for pos in car.hist_xy:
+            X.append(pos.X)
+            Y.append(h-pos.Y)
+        X.append(car.curr_xy.X)
+        Y.append(h-car.curr_xy.Y)
+        plt.plot(X, Y, sym, ms=20, label = l)#, marker="o", markerfacecolor="r")
+    plt.legend()
+        #if len(X) != 0:
+        #    plt.annotate(str(car.m_id),(X[-1], Y[-1]))
+
+def save_car(car, fname):
+    with file(fname, 'w') as f:
+        f.writelines(['x,y\n'])
+        for pos in car.hist_xy:
+            f.writelines(['%s,'%pos.X, '%s\n'%pos.Y])
+        f.writelines(['%s,'%car.curr_xy.X, '%s\n'%car.curr_xy.Y])
 
 print "================== 初始化，加载数据============================="
 frames = []
@@ -124,20 +157,7 @@ print "================== show and save =============================="
 #                 marker="o", markerfacecolor="r")
 #        print '(%d, %d)->%f' % (car_list[i].m_id, j, cost_arr[i,j])
 
-plt.figure()
-plt.imshow(img)
-for car in car_list:
-    X = []
-    Y = []
-    for pos in car.hist_xy:
-        X.append(pos.X)
-        Y.append(h-pos.Y)
-    #X.append(car.curr_xy.X)
-    #Y.append(h-car.curr_xy.Y)
-    plt.plot(X, Y, '-') #marker="o", markerfacecolor="r")
-    if len(X) != 0:
-        plt.annotate(str(car.m_id),(X[-1], Y[-1]))
-plt.show()    
+show_all(img, car_list)
     
 import cPickle as pkl
 pkl.dump(car_list, file('track_src.pkl','wb'))

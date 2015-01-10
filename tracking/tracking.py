@@ -17,6 +17,16 @@ import matplotlib.pyplot as plt
 from sklearn.neighbors import KDTree
 
 
+
+def save_v(car_list, fname):
+    with file(fname, 'w') as f:
+        f.writelines(['x,y,v\n'])
+        for car in car_list:
+            if 0 != len(car.hist_xy):
+                f.writelines(['%s,'%car.curr_xy.X, '%s,'%car.curr_xy.Y, \
+                            '%s\n'%(modulus(car.curr_xy.vec() - \
+                            car.hist_xy[-1].vec())/(car.interval*car.step))])
+
 def show_detection(img_path, csv):
     plt.figure()
     lines = file(csv,'r').readlines()
@@ -45,6 +55,29 @@ def show_track(img, car):
     if len(X) != 0:
         plt.annotate(str(car.m_id),(X[-1], Y[-1]))
     plt.show()
+    
+def show_all(img, car_list):
+    plt.figure()
+    plt.imshow(img)
+    for car in car_list:
+        X = []
+        Y = []
+        for pos in car.hist_xy:
+            X.append(pos.X)
+            Y.append(h-pos.Y)
+        X.append(car.curr_xy.X)
+        Y.append(h-car.curr_xy.Y)
+        plt.plot(X, Y, '-') #marker="o", markerfacecolor="r")
+        if len(X) != 0:
+            plt.annotate(str(car.m_id),(X[-1], Y[-1]))
+    plt.show()
+
+def save_car(car, fname):
+    with file(fname, 'w') as f:
+        f.writelines(['x,y\n'])
+        for pos in car.hist_xy:
+            f.writelines(['%s,'%pos.X, '%s\n'%pos.Y])
+        f.writelines(['%s,'%car.curr_xy.X, '%s\n'%car.curr_xy.Y])
 
 
 print "================== 初始化，加载数据============================="
@@ -73,8 +106,9 @@ for line in lines[1:]:
     xc = float(xc)
     yc = float(yc)
     o = float(o)
-    car_list.append(Car(Point(xc,h-yc), img[yc-20:yc+20,xc-20:xc+20,:], o))
-    plt.scatter(xc, yc) # 注意绘制图片的坐标系和笛卡尔坐标系的区别
+    if img[yc-20:yc+20,xc-20:xc+20,:].shape == (40,40,3):
+        car_list.append(Car(Point(xc,h-yc), img[yc-20:yc+20,xc-20:xc+20,:], o))
+        plt.scatter(xc, yc) # 注意绘制图片的坐标系和笛卡尔坐标系的区别
     # objs.append((xc, yc, o))
 plt.show()
 
@@ -112,7 +146,7 @@ for f in frames[1:]:
         target_pt['img'] = None
         pts.append(target_pt)
     
-    cost_arr = np.ones((len(car_list), len(pts))) # *0.8
+    cost_arr = np.ones((len(car_list), len(pts)))*0.5
     # 计算Cost——Matrix
     for i in range(len(car_list)):
         if not car_list[i].dad:
@@ -121,7 +155,7 @@ for f in frames[1:]:
             for j in idx:
                 #print pts[j]['loc']
                 #print cost(car_list[i], pts[j]['loc'], pts[j]['img'])
-                cost_arr[i,j] =  1 - cost(car_list[i], pts[j]['loc'], pts[j]['img'])[0]
+                cost_arr[i,j] =  1 - cost(car_list[i], pts[j]['loc'], pts[j]['direction'], pts[j]['img'])[0]
                 #print cost_arr[i,j]
     
     
@@ -137,7 +171,7 @@ for f in frames[1:]:
     # 目标点集中如果没有被匹配上的添加新Car
     label_pts = np.zeros((len(pts)))
     for i, j in indexes:
-        if pts[j]['loc'] != None and cost_arr[i,j] != 1:
+        if pts[j]['loc'] != None and cost_arr[i,j] != 0.5:
             car_list[i].update(pts[j]['loc'], pts[j]['direction'])
             xc, yc = pts[j]['loc'].X, pts[j]['loc'].Y
             yc = h - yc
@@ -145,13 +179,17 @@ for f in frames[1:]:
             label_pts[j] = 1
         else:
             car_list[i].dummy_update()
-            # print '(%d, %d)->%f' % (car_list[i].m_id, j, cost_arr[i,j])
+        print '(%d, %d)->%f' % (car_list[i].m_id, j, cost_arr[i,j])
     
     for pt, label in zip(pts, label_pts):
         if label == 0 and pt['loc'] != None:
             xc, yc = pt['loc'].X, pt['loc'].Y
             yc = h - yc
             car_list.append(Car(Point(xc,h-yc), img1[yc-20:yc+20,xc-20:xc+20,:], pt['direction']))
+            
+    save_v(car_list, 'MS04_heatmap/v_%s'%os.path.split(f[0])[1])
+    #show_all(img1, car_list)
+    #raw_input("continue....?")
             
 print "================== show and save =============================="
 #plt.figure()
@@ -165,19 +203,7 @@ print "================== show and save =============================="
 #                 marker="o", markerfacecolor="r")
 #        print '(%d, %d)->%f' % (car_list[i].m_id, j, cost_arr[i,j])
 
-plt.figure()
-plt.imshow(img)
-for car in car_list:
-    X = []
-    Y = []
-    for pos in car.hist_xy:
-        X.append(pos.X)
-        Y.append(h-pos.Y)
-    X.append(car.curr_xy.X)
-    Y.append(h-car.curr_xy.Y)
-    plt.plot(X, Y, '-') #marker="o", markerfacecolor="r")
-    if len(X) != 0:
-        plt.annotate(str(car.m_id),(X[-1], Y[-1]))
+show_all(img, car_list)
     
     #raw_input("waiting...")
 # plt.show()    

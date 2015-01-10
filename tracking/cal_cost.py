@@ -14,7 +14,10 @@ from skimage.color import rgb2gray
 
 # 搜索半径
 # 用于确定候选匹配的搜索半径
-search_r = 60 # 单位为pixels
+# MS区域为street区域，算是城区，德国标准限速50km/h 即：约为13.9m/s
+# 航摄间隔为0.4s，像素大小为0.12m。
+search_r = int((14.0*0.4)/0.12)
+# search_r = 60 # 单位为pixels
 
 def unit_vector(vector):
     """ Returns the unit vector of the vector.  
@@ -124,9 +127,10 @@ def c_p(car_t, pt_t1):
     else:
         return 1 - car_t.curr_xy.dist(pt_t1)/(search_r) #/car_t.interval
 
-def c_v(car_t, pt_t1):
+def c_v(car_t, pt_t1, pt_o):
     """ 计算当前车辆与目标点之间Cv权重(角度变化导致的权重变化)
-        如果car_t是新track，需要改写
+        如果car_t是新track，由于位置检测的漂移，方向飘忽不定，暂时不使用curr_v,
+        由curr_d代替。
     """
     if False: #not car_t.is_new:
         v_t = car_t.curr_v
@@ -138,24 +142,30 @@ def c_v(car_t, pt_t1):
         return 0.5 + 0.5*cos_angle
     else:
         D = 360 - car_t.curr_d
+        Dt1 = 360 - pt_o
         #print D, np.cos(np.radians(D)), np.sin(np.radians(D))
         v_t = unit_vector(Point(np.cos(np.radians(D)), np.sin(np.radians(D))).vec())
-        v_t1 = unit_vector(car_t.curr_xy.vec() - pt_t1.vec())
+        v_t1 = None
+        if car_t.curr_xy.dist(pt_t1) < 20:
+            v_t1 = unit_vector(Point(np.cos(np.radians(Dt1)), np.sin(np.radians(Dt1))).vec())
+        else:        
+        # TODO: 暂时修正为，单纯依靠检测方向
+            v_t1 = unit_vector(car_t.curr_xy.vec() - pt_t1.vec())
         cos_angle = np.dot(v_t, v_t1) # 如果前后点不动会导致nan值
         if np.isnan(cos_angle):
             cos_angle = 1
         # print cos_angle, v_t, v_t1
         return 0.5 + 0.5*abs(cos_angle) #不管正负方向一致就行，初始的时候是这样的
 
-def cost(car_t, pt_t1, pt_img):
+def cost(car_t, pt_t1, pt_o, pt_img):
     cost1, result= c_match(car_t, pt_t1, pt_img) # 模板匹配
-    cost2 = c_v(car_t, pt_t1) # 角度
+    cost2 = c_v(car_t, pt_t1, pt_o) # 角度
     cost3 = c_p(car_t, pt_t1) # 距离
     
     # 控制cost1 2 3 之间的比重
     if cost2 > 0.5 and cost3 > 0: # 角度严重不符合，不予考虑
-        alpha = 0.5
-        beta = 0.2
+        alpha = 0.3
+        beta = 0.4
         return (alpha*cost1+beta*cost2+(1-alpha-beta)*cost3), cost1, cost2, cost3
     else:
         return 2, cost1, cost2, cost3

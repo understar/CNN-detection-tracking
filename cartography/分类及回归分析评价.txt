@@ -1,0 +1,2 @@
+使用scikit-learn进行评价
+http://scikit-learn.org/stable/modules/model_evaluation.html#regression-metrics

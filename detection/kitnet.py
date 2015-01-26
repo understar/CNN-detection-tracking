@@ -16,7 +16,7 @@ import os,sys
 #sys.path.append(os.path.dirname(__file__))
 
 #不能使用local层
-_KITNET_FILE = 'kitnet.epoch31'
+_KITNET_FILE = '26.5'#'kitnet.epoch31'
 _META_FILE = 'batches.meta31'
 
 # This is a legacy flag specifying if the network is trained with vertically

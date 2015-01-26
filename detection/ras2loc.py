@@ -103,13 +103,14 @@ def refilter(props, input_src):
         # TODO: 检测一副远远不够，在附近多检测几张
         cy = int((bbox[1]+bbox[3])/2)
         cx = int((bbox[0]+bbox[2])/2)
-        k_n = 5 # 5*5
+        k_n = 3 # 5*5
+        step = 1
         angles = np.zeros((k_n,k_n))
         probs = np.zeros((k_n,k_n))
         for i in np.arange(-int(k_n/2),int(k_n/2)+1):
             for j in np.arange(-int(k_n/2),int(k_n/2)+1):
-                x = cx + i
-                y = cy + j
+                x = cx + i*step
+                y = cy + j*step
                 min_row, max_row, min_col, max_col = \
                     x-_WIDTH/2, x+_WIDTH/2, y-_WIDTH/2, y+_WIDTH/2
                 # print min_row, max_row, min_col, max_col
@@ -129,12 +130,13 @@ def refilter(props, input_src):
                     else:
                         angles[i+int(k_n/2),j+int(k_n/2)] = angle[0]
                         probs[i+int(k_n/2),j+int(k_n/2)] = angle[1]
-        # TODO: 根据检测为Car的结果所占的比例过滤? 多大比例合适
+
         # 确实可以过滤一部分
         ratio = float(np.count_nonzero(angles))/float(k_n*k_n)
+        # TODO: 根据检测为Car的结果所占的比例过滤? 多大比例合适.
         # print ratio
-        if ratio > 0.9: #len(angles) != 0:
-            results.append((oid, cx, cy, area, angles, img, probs, ratio))
+        if ratio > 0.8:#  True:#len(angles) != 0:
+            results.append((oid, cx, cy, area, angles, img[:,:,0], probs, ratio))
         
         pbar.update(cnt+1)
         cnt += 1
@@ -163,7 +165,7 @@ def writeprops(props, fname):
         for r in props:
             #if r[6] == 1:
             angle = Avg_angle(r[4])
-            if angle != None:
+            if angle != None and r[3]>50: # 只有面积大的区域保留下来
                 f.writelines(["%s,"%r[0], "%s,"%r[1], "%s,"%r[2],
                               "%s,"%r[3], "%s"%angle ,'\n']) #, "%s"%r[6] 
                 #skimage.io.imsave(fname[:-4]+"_%s_%s.png"%(r[0], 100*r[7]), r[5])
@@ -193,8 +195,14 @@ if __name__ == '__main__':
     #plt.figure(); open1 = opening(img, disk(1)); plt.imshow(open1)
     #plt.figure(); open3 = opening(img, disk(3)); plt.imshow(open3)
     #plt.figure(); close3 = closing(open3, disk(3)); plt.imshow(close3)
-    open3 = opening(img, disk(3))
-    img = open3 #closing(open3, disk(3))
+    
+    #open3 = closing(img, square(3))
+    #open3 = opening(open3, square(3))
+    #plt.imshow(open3)
+    #plt.show()
+    #raw_input("ok....?")
+    
+    #img = open3 #closing(open3, disk(3))
     
     
     props = ras2loc(img, src)

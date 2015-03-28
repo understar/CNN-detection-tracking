@@ -39,7 +39,9 @@ class Point:
 # Tracking Record
 class Car:
     _id_ = 0
-    def __init__(self, _loc, template = None, direction=None, oid=None, step_t = 2.0):
+    def __init__(self, _loc, template = None, direction=None, oid=None, step_t = 0.4):
+        """step_t代表两次拍摄之间的间隔
+        """
         self.hist_xy = list()
         self.hist_v = list()
         self.curr_v = 0

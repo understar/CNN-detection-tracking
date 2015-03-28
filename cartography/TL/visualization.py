@@ -38,7 +38,7 @@ def visualization(sample_list, feature_arr):
             X.append(xy)
             arr_sam = io.imread(img_path) 
         
-            imagebox = OffsetImage(arr_sam, zoom=0.3, cmap=cm.gray) 
+            imagebox = OffsetImage(arr_sam, zoom=0.5, cmap=cm.gray) 
             ab = AnnotationBbox(imagebox, xy, 
                                 xycoords='data', 
                                 pad=0, 
@@ -47,13 +47,13 @@ def visualization(sample_list, feature_arr):
 
     X = np.array(X)
     
-    ax.grid(True)
+    #ax.grid(True) #´ò¿ª¸ñÍø
     #ax.set_xlim(-40, 40)
     #ax.set_ylim(-40, 40)
     plt.scatter(X[:,0], X[:,1], 7)
-    plt.xlabel('X')
-    plt.ylabel('Y')
-    plt.title('t-SNE Visualization')
+    plt.xlabel('x')
+    plt.ylabel('y')
+    #plt.title('t-SNE Visualization')
     plt.savefig("tSNE.tif", dpi=300)
     plt.show()
        

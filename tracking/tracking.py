@@ -15,17 +15,29 @@ from skimage.color import rgb2gray
 from skimage.io import imread
 import matplotlib.pyplot as plt
 from sklearn.neighbors import KDTree
+from matplotlib import rcParams
+# rcParams dict
+rcParams['axes.labelsize'] = 10
+rcParams['xtick.labelsize'] = 10
+rcParams['ytick.labelsize'] = 10
+rcParams['legend.fontsize'] = 10
+rcParams['font.family'] = 'serif'
+rcParams['font.serif'] = ['Computer Modern Roman']
+rcParams['text.usetex'] = True
+rcParams['figure.figsize'] = 7, 5
 
 
+_resolution_=0.12 #MS04区域影像空间分辨率
 
 def save_v(car_list, fname):
     with file(fname, 'w') as f:
         f.writelines(['x,y,v\n'])
         for car in car_list:
             if 0 != len(car.hist_xy):
-                f.writelines(['%s,'%car.curr_xy.X, '%s,'%car.curr_xy.Y, \
-                            '%s\n'%(modulus(car.curr_xy.vec() - \
-                            car.hist_xy[-1].vec())/(car.interval*car.step))])
+                # 计算速度,输出单位km/h
+                # v = dist / time_interval
+                v = 3.6*modulus(car.curr_xy.vec()-car.hist_xy[-1].vec())*_resolution_/(car.interval*car.step)
+                f.writelines(['%s,'%car.curr_xy.X, '%s,'%car.curr_xy.Y, '%s\n'%v])
 
 def show_detection(img_path, csv):
     plt.figure()
@@ -68,8 +80,8 @@ def show_all(img, car_list):
         X.append(car.curr_xy.X)
         Y.append(h-car.curr_xy.Y)
         plt.plot(X, Y, '-') #marker="o", markerfacecolor="r")
-        if len(X) != 0:
-            plt.annotate(str(car.m_id),(X[-1], Y[-1]))
+        #if len(X) != 0:
+        #    plt.annotate(str(car.m_id),(X[-1], Y[-1]))
     plt.show()
 
 def save_car(car, fname):

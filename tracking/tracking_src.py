@@ -15,6 +15,16 @@ from skimage.color import rgb2gray
 from skimage.io import imread
 import matplotlib.pyplot as plt
 from sklearn.neighbors import KDTree
+from matplotlib import rcParams
+# rcParams dict
+rcParams['axes.labelsize'] = 10
+rcParams['xtick.labelsize'] = 10
+rcParams['ytick.labelsize'] = 10
+rcParams['legend.fontsize'] = 10
+rcParams['font.family'] = 'serif'
+rcParams['font.serif'] = ['Computer Modern Roman']
+rcParams['text.usetex'] = True
+rcParams['figure.figsize'] = 7, 5
 
 
 def save_v(car_list, fname):
@@ -56,7 +66,7 @@ def show_track(img, car):
         plt.annotate(str(car.m_id),(X[-1], Y[-1]))
     plt.show()
 
-def show_all(img, car_list, syms, labels):
+def show_all_syms_labels(img, car_list, syms, labels):
     plt.figure()
     plt.imshow(img)
     for car, sym, l in zip(car_list, syms, labels):
@@ -71,7 +81,23 @@ def show_all(img, car_list, syms, labels):
     plt.legend()
         #if len(X) != 0:
         #    plt.annotate(str(car.m_id),(X[-1], Y[-1]))
-
+    
+def show_all(img, car_list):
+    plt.figure()
+    plt.imshow(img)
+    for car in car_list:
+        X = []
+        Y = []
+        for pos in car.hist_xy:
+            X.append(pos.X)
+            Y.append(h-pos.Y)
+        X.append(car.curr_xy.X)
+        Y.append(h-car.curr_xy.Y)
+        plt.plot(X, Y, '-') #marker="o", markerfacecolor="r")
+        #if len(X) != 0:
+        #    plt.annotate(str(car.m_id),(X[-1], Y[-1]))
+    plt.show()
+    
 def save_car(car, fname):
     with file(fname, 'w') as f:
         f.writelines(['x,y\n'])

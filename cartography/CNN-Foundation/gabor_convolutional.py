@@ -52,14 +52,16 @@ axes[0][0].axis('off')
 
 # Plot Source image
 axes[1][0].imshow(test)
-axes[1][0].set_title("Input image", fontsize=11)
+#axes[1][0].set_title("Input image", fontsize=11)
+
 axes[1][0].axis('off')
 
 for label, (kernel, power), idx in zip(kernel_params, results, range(1,5)):
     # Plot Gabor kernel
     ax = axes[0,idx]
     ax.imshow(np.real(kernel), interpolation='nearest')
-    ax.set_title(label, fontsize=11)
+    #ax.set_title(label, fontsize=11)
+    
     ax.set_xticks([])
     ax.set_yticks([])
 

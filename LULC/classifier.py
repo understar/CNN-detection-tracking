@@ -47,7 +47,7 @@ for k,v in dataset.items():
     Y = []
     for item in v:
         Y.append(k)
-        X.append(item.flatten())
+        X.append(item)
     Y = le.transform(Y)
     X = np.vstack(X)
     
@@ -61,8 +61,8 @@ for k,v in dataset.items():
     
 x_train = np.vstack(x_train)
 x_test = np.vstack(x_test)
-y_train = np.vstack(y_train)
-y_test = np.vstack(y_test)
+y_train = np.hstack(y_train)
+y_test = np.hstack(y_test)
 
 # ´òÂÒ
 index = np.arange(y_train.shape[0])
@@ -78,18 +78,18 @@ x_test = x_test[index,:]
 y_test = y_test[index]
 
 
-decaf = Decaffeature()
+decaf = DecafFeature()
 svm = SVC(kernel='linear', probability = True, class_weight='auto',random_state=np.random.RandomState())
 
 
 clf = Pipeline([('decaf', decaf),('svm',svm)]) #('zca',zca)
 
 parameters = {
-    'svm__C': (0.01, 0.1, 1, 10, 100)
+    'svm__C': (0.001, 1, 1000)
 }
 
 
-gridCV = GridSearchCV(clf, parameters,n_jobs=3,verbose=True)
+gridCV = GridSearchCV(clf, parameters,n_jobs=1,verbose=True)
 
 print "****************Grid Search******************************"
 gridCV.fit(x_train, y_train)
@@ -107,8 +107,15 @@ joblib.dump(gridCV, "grid_cv.pkl", compress=3)
 print "*********************Test*******************************"
 y_test_pre = best.predict(x_test)
 cm = confusion_matrix(y_test, y_test_pre)
-print "confusion matrix..."
-print cm
+from map_confusion import plot_conf
+plot_conf(cm, range(le.classes_.size))
+#print "confusion matrix..."
+#print cm
+
+from sklearn.metrics import classification_report
+with file('report.txt', 'w') as f:
+    report = classification_report(y_test, y_test_pre, target_names = le.classes_)
+    f.writelines(report)
     
 """
 print "*********************ROC********************************"

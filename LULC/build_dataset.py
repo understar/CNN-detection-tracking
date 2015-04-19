@@ -12,6 +12,7 @@ import os, sys, shutil
 import pickle as pkl
 #from skimage.io import imread, imsave
 from PIL import Image
+import imghdr
 
 img_size = (256,256)
 
@@ -43,7 +44,8 @@ if __name__ == '__main__':
                     #print tmp.shape
                 """
                 #images.append(tmp)
-                images.append(img_path)
+                if imghdr.what(file(img_path,'r')) != None:
+                    images.append(img_path)
                 
             dataset[catelog] = images
         

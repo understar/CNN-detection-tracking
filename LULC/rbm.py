@@ -20,15 +20,18 @@ from sklearn.externals import joblib
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import confusion_matrix
 from skimage.io import imread
+from skimage.color import rgb2gray
+from skimage.util import img_as_ubyte
+from skimage.filter import sobel, threshold_otsu
+from numpy.random import shuffle
 
 import pickle as pkl
 import argparse
 import time
 
-
 from sklearn.base import TransformerMixin,BaseEstimator
 class BoWFeature(BaseEstimator, TransformerMixin):
-    def __init__(self, patch_num=10000, patch_size=(8, 8), sample_num = 100,\
+    def __init__(self, patch_num=10000, patch_size=(8, 8), sample_num = 300,\
                 n_components=256, learning_rate=0.03, n_iter=100, batch_size=100):
         self.patch_num = patch_num
         self.patch_size = patch_size
@@ -45,16 +48,20 @@ class BoWFeature(BaseEstimator, TransformerMixin):
         data = []
         for item in X:
             img = imread(str(item[0]))
+            img = img_as_ubyte(rgb2gray(img))
+            #img = self.binary(img) # 二值化
             tmp = extract_patches_2d(img, self.patch_size, max_patches = num,\
                                     random_state=np.random.RandomState())
             data.append(tmp)
         
         data = np.vstack(data)
         data = data.reshape(data.shape[0], -1)
+        data = np.asarray(data, 'float32')
+        
+        # 二值化后不需要0-1归化
         data = data - np.min(data, 0)
         data = data/(np.max(data, 0) + 0.0001)  # 0-1 scaling
-        #data -= np.mean(data, axis=0)
-        #data /= np.std(data, axis=0)
+        
         self.rbm = BernoulliRBM(n_components=self.n_components,\
                         learning_rate=self.learning_rate, \
                         n_iter=self.n_iter,\
@@ -67,15 +74,18 @@ class BoWFeature(BaseEstimator, TransformerMixin):
         results = []
         for sample in X:
             img = imread(str(sample[0]))
+            img = img_as_ubyte(rgb2gray(img))
+            #img = self.binary(img)
             patches = extract_patches_2d(img, self.patch_size,\
                                          max_patches = self.sample_num,\
                                          random_state=np.random.RandomState())
             
             patches = patches.reshape(patches.shape[0], -1)
+            patches = np.asarray(patches, 'float32')
+            
             patches = patches-np.min(patches, 0)
             patches = patches/(np.max(patches, 0) + 0.0001)
-            #patches -= np.mean(patches, axis=0)
-            #patches /= np.std(patches, axis=0)
+
             patches = self.rbm.transform(patches)
             results.append(patches.sum(axis=0))
         return np.vstack(results)
@@ -92,14 +102,20 @@ class BoWFeature(BaseEstimator, TransformerMixin):
         for parameter, value in parameters.items():
             self.__setattr__(parameter, value)
         return self
+        
+    def binary(self, img):
+        edge = sobel(img)
+        thresh = threshold_otsu(edge)
+        edge = edge>=thresh
+        return edge.astype(np.int)
  
 
-def show(components):
+def show(components, patch_size):
     plt.figure(figsize=(4.2, 4))
-    for i, comp in enumerate(components):
-        plt.subplot(10, 10, i + 1)
-        plt.imshow(comp.reshape((8,8,3)),
-                   interpolation='nearest')
+    for i, comp in enumerate(components[:100]):
+        plt.subplot(10, 10, i+1)
+        plt.imshow(comp.reshape(patch_size),cmap=plt.cm.gray,
+                   interpolation='none')
         plt.xticks(())
         plt.yticks(())
     plt.suptitle('100 components extracted by RBM', fontsize=16)
@@ -154,6 +170,19 @@ if __name__ == "__main__":
     y_train = np.hstack(y_train)
     y_test = np.hstack(y_test)
     
+    # 打乱
+    index = np.arange(y_train.shape[0])
+    shuffle(index)
+    
+    x_train = x_train[index,:]
+    y_train = y_train[index]
+    
+    index = np.arange(y_test.shape[0])
+    shuffle(index)
+    
+    x_test = x_test[index,:]
+    y_test = y_test[index]
+    
     if args["search"] == 1:
         # initialize the RBM
         bow = BoWFeature()
@@ -165,7 +194,9 @@ if __name__ == "__main__":
                 "lr__C": [1, 100],
                 "bow__learning_rate": [0.01, 0.03],
                 "bow__n_iter": [50, 100],
-                "bow__n_components": [256, 512]}
+                "bow__n_components": [256, 512]
+                }
+
         
         print "SEARCHING BOW+LR"
         # perform a grid search over the parameter
@@ -192,16 +223,38 @@ if __name__ == "__main__":
         joblib.dump(best, "classifier_rbm.pkl", compress=3)
         joblib.dump(gs, "grid_cv_rbm.pkl", compress=3)
         
-        #best = joblib.load(prj_name + "/classifier_svc.pkl")
-                
-        print "*********************Test*******************************"
-        y_test_pre = best.predict(x_test)
-        cm = confusion_matrix(y_test, y_test_pre)
-        from map_confusion import plot_conf
-        plot_conf(cm, range(le.classes_.size))
+    else:
+        # 直接设置参数训练
+        bow = BoWFeature()
+        bow.patch_num=10000
+        bow.patch_size=(20,20)
+        bow.learning_rate=0.001
+        bow.n_components=512
+        bow.n_iter=100
+        bow.sample_num = 1000
         
-        from sklearn.metrics import classification_report
-        with file('report_rbm.txt', 'w') as f:
-            report = classification_report(y_test, y_test_pre, target_names = le.classes_)
-            f.writelines(report)
+        bow.fit(x_train)
+        
+        svm = SVC(kernel='linear', probability = True, random_state=42)
+        svm.C = 1000
+        #lr = LogisticRegression()
+        #lr.C = 100
+        '''
+        best = Pipeline([('bow', bow),('svm',svm)])
+        best.fit(x_train, y_train)
+        
+        print "*********************Save*******************************"
+        joblib.dump(best, "classifier_rbm.pkl", compress=3)
+                
+    print "*********************Test*******************************"
+    y_test_pre = best.predict(x_test)
+    cm = confusion_matrix(y_test, y_test_pre)
+    from map_confusion import plot_conf
+    plot_conf(cm, range(le.classes_.size), 'RSDataset.png')
     
+    from sklearn.metrics import classification_report
+    with file('report_rbm.txt', 'w') as f:
+        report = classification_report(y_test, y_test_pre, target_names = le.classes_)
+        f.writelines(report)
+    '''
+    show(bow.rbm.components_,(8,8))

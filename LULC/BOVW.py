@@ -16,7 +16,7 @@ import logging
 logging.getLogger().setLevel(logging.INFO)
 
 from numpy.random import random
-from sklearn.cluster import KMeans
+from sklearn.cluster import KMeans, MiniBatchKMeans
 from sklearn.feature_extraction.image import extract_patches_2d
 from sklearn.decomposition import MiniBatchDictionaryLearning
 
@@ -65,7 +65,7 @@ class BoVWFeature(TransformerMixin):
       the size of codebook, default:1000
     
     method : str
-      codebook's compute method , value: 'sc'
+      codebook's compute method , value: 'sc','km'
       
     """
     def __init__(self, codebook_size=512, method='sc'):
@@ -90,16 +90,17 @@ class BoVWFeature(TransformerMixin):
         data = np.vstack(patchs)
         data = data.reshape(data.shape[0], -1)
         
-        self.mean = np.mean(data, axis=0)
-        self.std = np.std(data, axis=0)
-        
-        data -= self.mean
-        data = data/self.std
+        data -= np.mean(data, axis=0)
+        data = data/np.std(data, axis=0)
         
         print 'Learning codebook...'
-        self.dico = MiniBatchDictionaryLearning(n_components=self.codebook_size, \
-                                           alpha=1, n_iter=100, batch_size =100, verbose=True)
-        self.dico.fit(data)
+        if self.method == 'sc':
+            self.dico = MiniBatchDictionaryLearning(n_components=self.codebook_size, \
+                                               alpha=1, n_iter=100, batch_size =100, verbose=True)
+            self.dico.fit(data)
+        elif self.method=='km':
+            # self.dico = MiniBatchKMeans(n_clusters=self.codebook_size)
+            pass
         
         return self
     

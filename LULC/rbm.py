@@ -257,4 +257,4 @@ if __name__ == "__main__":
         report = classification_report(y_test, y_test_pre, target_names = le.classes_)
         f.writelines(report)
     '''
-    show(bow.rbm.components_,(8,8))
+    show(bow.rbm.components_,(20,20))

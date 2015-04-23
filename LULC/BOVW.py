@@ -2,6 +2,18 @@
 """
 提取BoVW特征(K-means or Sparse coding)
 
+首先是除了需要前面的sift+bow以后，还需要spm或者scspm LLC等，进一步coding pooling
+具体内涵还需要进一步理解？
+
+目前一个idea是通过改进后面的coding方法，pyramid方法，替换为分割，分割单元取中心patch
+进行VQ,在统计直方图时，进行面积加权统计。
+
+进行0均值1方差预处理的pipeline
+scaler = preprocessing.StandardScaler().fit(X)
+
+最大最小化缩放 feature_range=(min, max)
+min_max_scaler = preprocessing.MinMaxScaler()
+
 @author: shuaiyi
 """
 

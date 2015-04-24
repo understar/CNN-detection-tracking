@@ -8,8 +8,10 @@ Created on Fri Apr 24 09:11:50 2015
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.externals import joblib
-from sklearn.decomposition import MiniBatchDictionaryLearning, RandomizedPCA #白化以及字典
+from sklearn.decomposition import SparseCoder, MiniBatchDictionaryLearning, RandomizedPCA #白化以及字典
+from sklearn.cluster import MiniBatchKMeans
 from sklearn.feature_extraction.image import extract_patches_2d
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
 
 from skimage.io import imread
 from skimage.color import rgb2gray
@@ -49,26 +51,47 @@ class Sparsecode(BaseEstimator, TransformerMixin):
             data = data.reshape(data.shape[0], -1)
             data = np.asarray(data, 'float32')
         else:
-            data = np.load(self.patch_file,'r') # load npy file
+            data = np.load(self.patch_file,'r+') # load npy file
         
         # whiten
-        print 'PCA Whiten...'
-        self.pca = RandomizedPCA(copy=True, whiten=True)
-        data = self.pca.fit_transform(data)
+        #print 'PCA Whiten...'
+        #self.pca = RandomizedPCA(copy=True, whiten=True)
+        #data = self.pca.fit_transform(data)
         
         # 0-1 scaling 都可以用preprocessing模块实现
-        #data = data - np.min(data, 0)
-        #data = data/(np.max(data, 0) + 0.0001) 
+        self.minmax = MinMaxScaler()
+        data = self.minmax.fit_transform(data)
+        #self.minmax.transform(data)
         
+        #k-means
+        self.kmeans = MiniBatchKMeans(n_clusters=self.n_components, init='k-means++', \
+                                    max_iter=self.n_iter, batch_size=self.batch_size, verbose=1,\
+                                    tol=0.0, max_no_improvement=100,\
+                                    init_size=None, n_init=3, random_state=np.random.RandomState(0),\
+                                    reassignment_ratio=0.0001)
+        self.kmeans.fit(data)
+        self.coder = SparseCoder(self.kmeans.cluster_centers_)
+        '''genertic
         self.dico = MiniBatchDictionaryLearning(n_components=self.n_components, \
                                            alpha=self.alpha, n_iter=self.n_iter, \
                                            batch_size =self.batch_size, verbose=True)
         self.dico.fit(data)
+        '''
         return self
     
     def transform(self, X):
-        X_whiten = self.pca.transform(X)
-        return self.dico.transform(X_whiten)
+        #whiten
+        #X_whiten = self.pca.transform(X)
+        
+        # 0-1 scaling 都可以用preprocessing模块实现
+        X = self.minmax.transform(X)
+
+        # MiniBatchDictionaryLearning
+        # return self.dico.transform(X_whiten)
+        
+        # k-means
+        return self.coder.transform(X_whiten)
+        
     
     def get_params(self, deep=True):
         return {"patch_num": self.patch_num,
@@ -101,12 +124,12 @@ if __name__ == "__main__":
     """Arguments"""
     ap = argparse.ArgumentParser()
     ap.add_argument("-p", "--patches", required = True,
-                    help = "patch for patches saving")    
+                    help = "patch for patches saving")
     args = vars(ap.parse_args())
     
     patches = args["patches"]
-    sc = Sparsecode(patches, alpha=0.7,n_iter=100)
+    sc = Sparsecode(patches, n_iter=1000, batch_size=100)
     sc.fit()
     
     print 'Show...'
-    show(sc.dico.components_, (16,16))
+    show(sc.kmeans.cluster_centers_, (16,16))

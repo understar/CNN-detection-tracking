@@ -28,10 +28,10 @@ class SiftFeature(TransformerMixin):
     """ 
     def __init__(self, size=16):
         self.size = size
+        self.sift = cv2.SIFT()
 
     
-    def fit(self, X, y=None):
-        self.sift = cv2.SIFT()
+    def fit(self, X=None, y=None):
         return self
     
     def transform(self, X):

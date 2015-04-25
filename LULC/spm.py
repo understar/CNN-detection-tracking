@@ -11,6 +11,7 @@ import numpy as np
 from sklearn.cluster import MiniBatchKMeans
 from sift import SiftFeature
 from SparseCode import Sparsecode, show
+from raw import RawFeature
 
 class SPMFeature(TransformerMixin):
     """ 
@@ -29,15 +30,29 @@ class SPMFeature(TransformerMixin):
       default: 'sc'
       
     """
-    def __init__(self, clusters = 1024, size=16, method='sc'):
+    def __init__(self, patch_file, level, clusters = 1024, size=16, method='sc'):
+        self.patch_file = patch_file
         self.clusters = clusters
         self.size = size
         self.method = method
-
+        self.level = level
     
-    def fit(self, X, y=None):
-        self.kmeans = MiniBatchKMeans()
-        self.sift = cv2.SIFT()
+    def fit(self, X=None, y=None):
+        self.kmeans = MiniBatchKMeans(n_clusters=self.clusters, n_init=10)
+        
+        X = np.load(self.patch_file,'r+')
+        
+        if self.method  == 'sift':
+            self.efm = SiftFeature(self.size)
+        elif self.method == 'sc':
+            self.efm = Sparsecode(patch_file=self.patch_file)
+        elif self.method == 'raw':
+            self.efm = RawFeature()
+        else:
+            self.efm = RawFeature()
+        
+        X = self.efm.fit_transform(X)
+        self.kmeans.fit(X)
         return self
     
     def transform(self, X):

@@ -1,43 +1,46 @@
 # -*- coding: cp936 -*-
 """
-Created on Fri Apr 24 16:05:13 2015
+Created on Sat Apr 25 09:59:47 2015
 
-@author: shuaiyi
+@author: Administrator
 """
 
 # from sklearn.base import BaseEstimator
 from sklearn.base import TransformerMixin
 import numpy as np
-import cv2
+from sklearn.cluster import MiniBatchKMeans
+from sift import SiftFeature
+from SparseCode import Sparsecode, show
 
-'''
-import cv2
-from skimage.data import lena
-img = lena()
-sift = cv2.SIFT()
-kps = sift.detect(img)
-kp.angle kp.pt kp.response kp.size
-kp = cv2.KeyPoint(10,10,16)
-kps, desc = sift.compute(img, [kp])
-'''
-
-class SiftFeature(TransformerMixin):
-    """
-    extract sift desc;
-    input is a img patch: size = 16*16
+class SPMFeature(TransformerMixin):
     """ 
-    def __init__(self, size=16):
+    Extract SPM Feature
+        
+    Parameters
+    ----------
+    clusters : int
+      K-means n_clusters, default:1024
+    
+    size : int
+      the size of patch, default: (256, 256, 3)
+      
+    method : str
+      the feature extraction method, values: {'sc', 'raw', 'sift'}, 
+      default: 'sc'
+      
+    """
+    def __init__(self, clusters = 1024, size=16, method='sc'):
+        self.clusters = clusters
         self.size = size
+        self.method = method
 
     
     def fit(self, X, y=None):
+        self.kmeans = MiniBatchKMeans()
         self.sift = cv2.SIFT()
         return self
     
     def transform(self, X):
-        '''
-        X: array like: n_samples, n_features
-        '''
         results = []
         for sample in X:
             tmp = sample.reshape(self.size, self.size)
@@ -55,15 +58,3 @@ class SiftFeature(TransformerMixin):
         for parameter, value in parameters.items():
             self.__setattr__(parameter, value)
         return self
-        
-    def normalizeSIFT(self, descriptor):
-        '''
-        Normal the sift: L2 norm
-        '''
-        descriptor = np.array(descriptor)
-        norm = np.linalg.norm(descriptor)
-    
-        if norm > 1.0:
-            descriptor /= float(norm)
-    
-        return descriptor

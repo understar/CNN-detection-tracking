@@ -1,7 +1,7 @@
 # -*- coding: cp936 -*-
 """
 Created on Sat Apr 25 09:59:47 2015
-
+所有的影像均为灰度影像
 @author: Administrator
 """
 
@@ -65,6 +65,13 @@ class SPMFeature(TransformerMixin):
             desc = self.normalizeSIFT(desc)
             results.append(desc)
         return np.vstack(results)
+        
+    def extract_patches(self, arr, steps=8):
+        m, n = arr.shape
+        x,y = np.meshgrid(range(0,m-self.size+1,steps),
+                          range(0,n-self.size+1,steps))
+        xx,yy = x.flatten(),y.flatten()
+        return {(i,j):arr[i:i+self.size,j:j+self.size] for i,j in zip(xx,yy)}
         
     def get_params(self, deep=True):
         return {"size": self.size}

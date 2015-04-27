@@ -239,7 +239,6 @@ if __name__ == "__main__":
         svm.C = 1000
         #lr = LogisticRegression()
         #lr.C = 100
-        '''
         best = Pipeline([('bow', bow),('svm',svm)])
         best.fit(x_train, y_train)
         
@@ -256,5 +255,5 @@ if __name__ == "__main__":
     with file('report_rbm.txt', 'w') as f:
         report = classification_report(y_test, y_test_pre, target_names = le.classes_)
         f.writelines(report)
-    '''
+
     show(bow.rbm.components_,(20,20))

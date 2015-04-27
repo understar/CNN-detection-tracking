@@ -84,6 +84,7 @@ class Sparsecode(BaseEstimator, TransformerMixin):
         #X_whiten = self.pca.transform(X)
         
         # 0-1 scaling 都可以用preprocessing模块实现
+        X = np.require(X, dtype=np.float32)
         X = self.minmax.transform(X)
 
         # MiniBatchDictionaryLearning

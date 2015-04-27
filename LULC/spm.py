@@ -9,6 +9,8 @@ Created on Sat Apr 25 09:59:47 2015
 from sklearn.base import TransformerMixin
 import numpy as np
 from sklearn.cluster import MiniBatchKMeans
+from scipy.cluster import vq
+from skimage.io import imread
 from sift import SiftFeature
 from SparseCode import Sparsecode, show
 from raw import RawFeature
@@ -23,14 +25,16 @@ class SPMFeature(TransformerMixin):
       K-means n_clusters, default:1024
     
     size : int
-      the size of patch, default: (256, 256, 3)
+      the size of patch, default: 16
       
     method : str
       the feature extraction method, values: {'sc', 'raw', 'sift'}, 
       default: 'sc'
-      
+     
+    level: int
+      the level of Spatial Pyramid Matching, default: 2
     """
-    def __init__(self, patch_file, level, clusters = 1024, size=16, method='sc'):
+    def __init__(self, patch_file, level=2, clusters = 1024, size=16, method='sc'):
         self.patch_file = patch_file
         self.clusters = clusters
         self.size = size
@@ -58,11 +62,12 @@ class SPMFeature(TransformerMixin):
     def transform(self, X):
         results = []
         for sample in X:
-            tmp = sample.reshape(self.size, self.size)
-            # ¼ì²âµã£¬¹Ì¶¨size£¬¹Ì¶¨angle
-            kp = cv2.KeyPoint(self.size//2,self.size//2,self.size, _angle=0)
-            _, desc = self.sift.compute(tmp,[kp])
-            desc = self.normalizeSIFT(desc)
+            img = imread(str(sample[0]))
+            patches = self.extract_patches(img)
+            tmp = np.array([i for x,y,i in patches])
+            tmp = self.efm.transform(tmp)
+            img_ftrs = [(x,y,ftr) for x,y,_,ftr in zip(patches, tmp)]
+            desc = self.buildHistogramForEachImageAtDifferentLevels(img, img_ftrs)
             results.append(desc)
         return np.vstack(results)
         
@@ -71,10 +76,63 @@ class SPMFeature(TransformerMixin):
         x,y = np.meshgrid(range(0,m-self.size+1,steps),
                           range(0,n-self.size+1,steps))
         xx,yy = x.flatten(),y.flatten()
-        return {(i,j):arr[i:i+self.size,j:j+self.size] for i,j in zip(xx,yy)}
+        return [(i,j,arr[i:i+self.size,j:j+self.size].flatten()) for i,j in zip(xx,yy)]
+        
+    
+    def buildHistogramForEachImageAtDifferentLevels(self, arr, ftrs, level=2):
+        """
+        build spatial pyramids of an image based on the attribute of level
+        """
+        width, height = arr.shape
+        widthStep = int(width / 4)
+        heightStep = int(height / 4)
+
+        descriptors = ftrs
+
+        # level 2, a list with size = 16 to store histograms at different location
+        histogramOfLevelTwo = np.zeros((16, self.kmeans.n_clusters))
+        for x, y, feature in descriptors:
+            boundaryIndex = int(x / widthStep)  + int(y / heightStep) *4
+
+            feature = feature.reshape(1, feature.size)
+
+            codes, distance = vq(feature, self.kmeans.cluster_centers_)
+            histogramOfLevelTwo[boundaryIndex][codes[0]] += 1
+
+        # level 1, based on histograms generated on level two
+        histogramOfLevelOne = np.zeros((4, self.size))
+        histogramOfLevelOne[0] = histogramOfLevelTwo[0] + histogramOfLevelTwo[1] + histogramOfLevelTwo[4] + histogramOfLevelTwo[5]
+        histogramOfLevelOne[1] = histogramOfLevelTwo[2] + histogramOfLevelTwo[3] + histogramOfLevelTwo[6] + histogramOfLevelTwo[7]
+        histogramOfLevelOne[2] = histogramOfLevelTwo[8] + histogramOfLevelTwo[9] + histogramOfLevelTwo[12] + histogramOfLevelTwo[13]
+        histogramOfLevelOne[3] = histogramOfLevelTwo[10] + histogramOfLevelTwo[11] + histogramOfLevelTwo[14] + histogramOfLevelTwo[15]
+
+        # level 0
+        histogramOfLevelZero = histogramOfLevelOne[0] + histogramOfLevelOne[1] + histogramOfLevelOne[2] + histogramOfLevelOne[3]
+
+
+        if level == 0:
+            return histogramOfLevelZero
+
+        elif level == 1:
+            tempZero = histogramOfLevelZero.flatten() * 0.5
+            tempOne = histogramOfLevelOne.flatten() * 0.5
+            result = np.concatenate((tempZero, tempOne))
+            return result
+
+        elif level == 2:
+            tempZero = histogramOfLevelZero.flatten() * 0.25
+            tempOne = histogramOfLevelOne.flatten() * 0.25
+            tempTwo = histogramOfLevelTwo.flatten() * 0.5
+            result = np.concatenate((tempZero, tempOne, tempTwo))
+            return result
+
+        else:
+            return None
         
     def get_params(self, deep=True):
-        return {"size": self.size}
+        return {"clusters": self.clusters,
+                "method":self.method,
+                "level":self.level}
         
     def set_params(self, **parameters):
         for parameter, value in parameters.items():

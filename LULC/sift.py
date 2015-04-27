@@ -10,17 +10,6 @@ from sklearn.base import TransformerMixin
 import numpy as np
 import cv2
 
-'''
-import cv2
-from skimage.data import lena
-img = lena()
-sift = cv2.SIFT()
-kps = sift.detect(img)
-kp.angle kp.pt kp.response kp.size
-kp = cv2.KeyPoint(10,10,16)
-kps, desc = sift.compute(img, [kp])
-'''
-
 class SiftFeature(TransformerMixin):
     """
     extract sift desc;
@@ -40,9 +29,9 @@ class SiftFeature(TransformerMixin):
         '''
         results = []
         for sample in X:
-            tmp = sample.reshape(self.size, self.size)
+            tmp = np.require(sample.reshape(self.size, self.size),dtype=np.ubyte)
             # ¼ì²âµã£¬¹Ì¶¨size£¬¹Ì¶¨angle
-            kp = cv2.KeyPoint(self.size//2,self.size//2,self.size, _angle=0)
+            kp = cv2.KeyPoint(self.size//2,self.size//2,self.size, _angle=90)
             _, desc = self.sift.compute(tmp,[kp])
             desc = self.normalizeSIFT(desc)
             results.append(desc)
@@ -67,3 +56,15 @@ class SiftFeature(TransformerMixin):
             descriptor /= float(norm)
     
         return descriptor
+
+if __name__ == "__main__":
+    from skimage.data import camera
+    from sklearn.feature_extraction.image import extract_patches_2d
+    img = camera()
+    patches = extract_patches_2d(img, (16,16),100,np.random.RandomState())
+    
+    patches = patches.reshape(patches.shape[0], -1)
+    patches = np.asarray(patches, 'float32')
+    sift = SiftFeature()
+    sift.fit()
+    feature = sift.transform(patches)

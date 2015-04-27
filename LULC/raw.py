@@ -7,6 +7,7 @@ Created on Sat Apr 25 16:37:06 2015
 
 from sklearn.base import TransformerMixin
 from sklearn.preprocessing import MinMaxScaler
+import numpy as np
 
 class RawFeature(TransformerMixin):
     def __init__(self):
@@ -21,6 +22,7 @@ class RawFeature(TransformerMixin):
         '''
         X: array like: n_samples, n_features
         '''
+        X = np.require(X, dtype=np.float32)
         return self.minmax.transform(X)
         
     def get_params(self, deep=True):

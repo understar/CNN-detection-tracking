@@ -51,7 +51,7 @@ class Sparsecode(BaseEstimator, TransformerMixin):
             data = data.reshape(data.shape[0], -1)
             data = np.asarray(data, 'float32')
         else:
-            data = np.load(self.patch_file,'r+') # load npy file
+            data = np.load(self.patch_file,'r+') # load npy file, 注意模式，因为后面需要修改
         
         # whiten
         #print 'PCA Whiten...'
@@ -69,8 +69,12 @@ class Sparsecode(BaseEstimator, TransformerMixin):
                                     tol=0.0, max_no_improvement=100,\
                                     init_size=None, n_init=3, random_state=np.random.RandomState(0),\
                                     reassignment_ratio=0.0001)
+        print "Codebook learning (k-means)..."
         self.kmeans.fit(data)
-        self.coder = SparseCoder(self.kmeans.cluster_centers_)
+        self.coder = SparseCoder(dictionary=self.kmeans.cluster_centers_, 
+                                 transform_n_nonzero_coefs=None,
+                                 transform_alpha=None, 
+                                 transform_algorithm='lars')
         '''genertic
         self.dico = MiniBatchDictionaryLearning(n_components=self.n_components, \
                                            alpha=self.alpha, n_iter=self.n_iter, \
@@ -91,7 +95,8 @@ class Sparsecode(BaseEstimator, TransformerMixin):
         # return self.dico.transform(X_whiten)
         
         # k-means
-        return self.coder.transform(X_whiten)
+        # TODO: sparse coder method?
+        return self.coder.transform(X)
         
     
     def get_params(self, deep=True):
@@ -134,3 +139,7 @@ if __name__ == "__main__":
     
     print 'Show...'
     show(sc.kmeans.cluster_centers_, (16,16))
+    
+    print 'Coding...'
+    data = np.load(patches,'r+')[0:100]
+    code = sc.transform(data)

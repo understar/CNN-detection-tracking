@@ -11,6 +11,8 @@ import numpy as np
 from sklearn.cluster import MiniBatchKMeans
 from scipy.cluster import vq
 from skimage.io import imread
+from skimage.color import rgb2gray
+from skimage.util import img_as_ubyte
 from sift import SiftFeature
 from SparseCode import Sparsecode, show
 from raw import RawFeature
@@ -42,7 +44,7 @@ class SPMFeature(TransformerMixin):
         self.level = level
     
     def fit(self, X=None, y=None):
-        self.kmeans = MiniBatchKMeans(n_clusters=self.clusters, n_init=10)
+        self.kmeans = MiniBatchKMeans(n_clusters=self.clusters, n_init=10, verbose=1)
         
         X = np.load(self.patch_file,'r+')
         
@@ -56,6 +58,8 @@ class SPMFeature(TransformerMixin):
             self.efm = RawFeature()
         
         X = self.efm.fit_transform(X)
+        
+        print "SPM K-means..."
         self.kmeans.fit(X)
         return self
     
@@ -63,10 +67,13 @@ class SPMFeature(TransformerMixin):
         results = []
         for sample in X:
             img = imread(str(sample[0]))
+            img = img_as_ubyte(rgb2gray(img)) # 目前只处理灰度图像
             patches = self.extract_patches(img)
             tmp = np.array([i for x,y,i in patches])
             tmp = self.efm.transform(tmp)
-            img_ftrs = [(x,y,ftr) for x,y,_,ftr in zip(patches, tmp)]
+            
+            img_ftrs = [(xyp[0],xyp[1],ftr) for xyp,ftr in zip(patches, tmp)]
+            
             desc = self.buildHistogramForEachImageAtDifferentLevels(img, img_ftrs)
             results.append(desc)
         return np.vstack(results)

@@ -19,7 +19,7 @@ from skimage.util import img_as_ubyte
 
 from numpy.random import shuffle
 import argparse
-
+import logging
 from sklearn.base import TransformerMixin,BaseEstimator
 
 class Sparsecode(BaseEstimator, TransformerMixin):
@@ -69,8 +69,10 @@ class Sparsecode(BaseEstimator, TransformerMixin):
                                     tol=0.0, max_no_improvement=100,\
                                     init_size=None, n_init=3, random_state=np.random.RandomState(0),\
                                     reassignment_ratio=0.0001)
-        print "Codebook learning (k-means)..."
+        logging.info("Sparse coding : Phase 1 - Codebook learning (K-means).")
         self.kmeans.fit(data)
+        
+        logging.info("Sparse coding : Phase 2 - Define coding method (omp,lars...).")
         self.coder = SparseCoder(dictionary=self.kmeans.cluster_centers_, 
                                  transform_n_nonzero_coefs=256,
                                  transform_alpha=None, 
@@ -86,16 +88,18 @@ class Sparsecode(BaseEstimator, TransformerMixin):
     def transform(self, X):
         #whiten
         #X_whiten = self.pca.transform(X)
-        
+        logging.info("Compute the sparse coding of X.")
         # 0-1 scaling 都可以用preprocessing模块实现
         X = np.require(X, dtype=np.float32)
-        X = self.minmax.transform(X)
+        
+        #TODO: 是否一定需要先fit，才能transform
+        X = self.minmax.fit_transform(X)
 
         # MiniBatchDictionaryLearning
         # return self.dico.transform(X_whiten)
         
         # k-means
-        # TODO: sparse coder method?
+        # TODO: sparse coder method? problem...
         return self.coder.transform(X)
         
     

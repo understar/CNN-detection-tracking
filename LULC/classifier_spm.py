@@ -25,6 +25,8 @@ from spm import SPMFeature
 import pickle as pkl
 import argparse
 import time
+import logging
+logging.getLogger().setLevel(logging.INFO)
 
 """Arguments"""
 ap = argparse.ArgumentParser()

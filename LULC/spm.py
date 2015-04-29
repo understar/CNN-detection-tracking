@@ -16,6 +16,9 @@ from skimage.util import img_as_ubyte
 from sift import SiftFeature
 from SparseCode import Sparsecode, show
 from raw import RawFeature
+import logging
+import time
+import progressbar
 
 class SPMFeature(TransformerMixin):
     """ 
@@ -44,7 +47,11 @@ class SPMFeature(TransformerMixin):
         self.level = level
     
     def fit(self, X=None, y=None):
-        self.kmeans = MiniBatchKMeans(n_clusters=self.clusters, n_init=10, verbose=1)
+        self.kmeans = MiniBatchKMeans(n_clusters=self.clusters,
+                                      n_init=10, verbose=1,
+                                      max_no_improvement=100,
+                                      reassignment_ratio=0.0001,
+                                      random_state=np.random.RandomState(0))
         
         X = np.load(self.patch_file,'r+')
         
@@ -57,28 +64,42 @@ class SPMFeature(TransformerMixin):
         else:
             self.efm = RawFeature()
         
+        logging.info("Fit and Transform Feature Extraction Transformer.")
         X = self.efm.fit_transform(X)
         
-        print "SPM K-means..."
+        logging.info("SPM Learning K-means Clusters.")
         self.kmeans.fit(X)
         return self
     
     def transform(self, X):
         results = []
+        pbar = progressbar.ProgressBar(maxval=X.shape[0]).start()
+        cnt = 0
+        
         for sample in X:
-            img = imread(str(sample[0]))
+            name = str(sample[0])
+            logging.info("Processing %s." % name)
+            img = imread(name)
             img = img_as_ubyte(rgb2gray(img)) # 目前只处理灰度图像
+            
+            logging.info("[%s] 1. Extract Dense Patches (Default Step is 16)." %time.ctime())
             patches = self.extract_patches(img)
+            
+            logging.info("[%s] 2. Compute the feature for each patches."%time.ctime())
             tmp = np.array([i for x,y,i in patches])
             tmp = self.efm.transform(tmp)
             
+            logging.info("[%s] 3. (VQ) Build Histogram for the Image At Different Levels."%time.ctime())
             img_ftrs = [(xyp[0],xyp[1],ftr) for xyp,ftr in zip(patches, tmp)]
-            
             desc = self.buildHistogramForEachImageAtDifferentLevels(img, img_ftrs)
             results.append(desc)
+            pbar.update(cnt+1)
+            cnt = cnt + 1
+                
+        pbar.finish()
         return np.vstack(results)
         
-    def extract_patches(self, arr, steps=8):
+    def extract_patches(self, arr, steps=20):
         m, n = arr.shape
         x,y = np.meshgrid(range(0,m-self.size+1,steps),
                           range(0,n-self.size+1,steps))

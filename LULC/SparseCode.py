@@ -72,9 +72,9 @@ class Sparsecode(BaseEstimator, TransformerMixin):
         print "Codebook learning (k-means)..."
         self.kmeans.fit(data)
         self.coder = SparseCoder(dictionary=self.kmeans.cluster_centers_, 
-                                 transform_n_nonzero_coefs=None,
+                                 transform_n_nonzero_coefs=256,
                                  transform_alpha=None, 
-                                 transform_algorithm='lars')
+                                 transform_algorithm='omp')
         '''genertic
         self.dico = MiniBatchDictionaryLearning(n_components=self.n_components, \
                                            alpha=self.alpha, n_iter=self.n_iter, \

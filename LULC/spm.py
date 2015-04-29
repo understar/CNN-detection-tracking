@@ -9,7 +9,7 @@ Created on Sat Apr 25 09:59:47 2015
 from sklearn.base import TransformerMixin
 import numpy as np
 from sklearn.cluster import MiniBatchKMeans
-from scipy.cluster import vq
+from scipy.cluster.vq import vq
 from skimage.io import imread
 from skimage.color import rgb2gray
 from skimage.util import img_as_ubyte
@@ -107,7 +107,7 @@ class SPMFeature(TransformerMixin):
             histogramOfLevelTwo[boundaryIndex][codes[0]] += 1
 
         # level 1, based on histograms generated on level two
-        histogramOfLevelOne = np.zeros((4, self.size))
+        histogramOfLevelOne = np.zeros((4, self.kmeans.n_clusters))
         histogramOfLevelOne[0] = histogramOfLevelTwo[0] + histogramOfLevelTwo[1] + histogramOfLevelTwo[4] + histogramOfLevelTwo[5]
         histogramOfLevelOne[1] = histogramOfLevelTwo[2] + histogramOfLevelTwo[3] + histogramOfLevelTwo[6] + histogramOfLevelTwo[7]
         histogramOfLevelOne[2] = histogramOfLevelTwo[8] + histogramOfLevelTwo[9] + histogramOfLevelTwo[12] + histogramOfLevelTwo[13]

@@ -24,7 +24,7 @@ from sklearn.base import TransformerMixin,BaseEstimator
 
 class Sparsecode(BaseEstimator, TransformerMixin):
     def __init__(self, patch_file=None, patch_num=10000, patch_size=(16, 16),\
-                n_components=512,  alpha = 1, n_iter=1000, batch_size=100):
+                n_components=512,  alpha = 1, n_iter=2000, batch_size=100):
         self.patch_num = patch_num
         self.patch_size = patch_size
         self.patch_file = patch_file
@@ -61,8 +61,11 @@ class Sparsecode(BaseEstimator, TransformerMixin):
         # 0-1 scaling 都可以用preprocessing模块实现
         self.minmax = MinMaxScaler()
         data = self.minmax.fit_transform(data)
-        #self.minmax.transform(data)
         
+        # Standardization
+        #self.standard = StandardScaler()
+        #data = self.standard.fit_transform(data)
+
         #k-means
         self.kmeans = MiniBatchKMeans(n_clusters=self.n_components, init='k-means++', \
                                     max_iter=self.n_iter, batch_size=self.batch_size, verbose=1,\
@@ -76,7 +79,8 @@ class Sparsecode(BaseEstimator, TransformerMixin):
         self.coder = SparseCoder(dictionary=self.kmeans.cluster_centers_, 
                                  transform_n_nonzero_coefs=256,
                                  transform_alpha=None, 
-                                 transform_algorithm='omp')
+                                 transform_algorithm='lasso_lars',
+                                 n_jobs = 1)
         '''genertic
         self.dico = MiniBatchDictionaryLearning(n_components=self.n_components, \
                                            alpha=self.alpha, n_iter=self.n_iter, \
@@ -89,11 +93,12 @@ class Sparsecode(BaseEstimator, TransformerMixin):
         #whiten
         #X_whiten = self.pca.transform(X)
         logging.info("Compute the sparse coding of X.")
-        # 0-1 scaling 都可以用preprocessing模块实现
         X = np.require(X, dtype=np.float32)
         
         #TODO: 是否一定需要先fit，才能transform
         X = self.minmax.fit_transform(X)
+        
+        #X = self.standard.transform(X)
 
         # MiniBatchDictionaryLearning
         # return self.dico.transform(X_whiten)
@@ -147,3 +152,13 @@ if __name__ == "__main__":
     print 'Coding...'
     data = np.load(patches,'r+')[0:100]
     code = sc.transform(data)
+    
+    """
+    img = imread(str(x_test[0,0]))
+    img = img_as_ubyte(rgb2gray(img)) 
+    patches = spm.extract_patches(img)
+    tmp = np.array([i for x,y,i in patches])
+    # tmp = tmp.astype(np.float32)
+    x_t = spm.efm.transform(tmp)
+    len(np.flatnonzero(x_t))
+    """

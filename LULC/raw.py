@@ -15,7 +15,7 @@ class RawFeature(TransformerMixin):
     
     def fit(self, X, y=None):
         self.minmax = MinMaxScaler()
-        self.minmax.fit(X)
+        # self.minmax.fit(X)
         return self
     
     def transform(self, X):
@@ -23,7 +23,7 @@ class RawFeature(TransformerMixin):
         X: array like: n_samples, n_features
         '''
         X = np.require(X, dtype=np.float32)
-        return self.minmax.transform(X)
+        return self.minmax.fit_transform(X)
         
     def get_params(self, deep=True):
         return None

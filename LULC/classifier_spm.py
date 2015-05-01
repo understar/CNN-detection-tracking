@@ -26,7 +26,7 @@ import pickle as pkl
 import argparse
 import time
 import logging
-logging.getLogger().setLevel(logging.INFO)
+logging.getLogger().setLevel(logging.WARN)
 
 """Arguments"""
 ap = argparse.ArgumentParser()
@@ -128,7 +128,8 @@ if args["search"] == 1:
     
 else:
     # 直接设置参数训练
-    spm = SPMFeature(patch_file=patches)
+    method = 'raw'
+    spm = SPMFeature(clusters=512, patch_file=patches, method=method)
     svm = SVC(kernel='linear', probability = True,random_state=42)
     clf = Pipeline([('spm', spm),('svm',svm)])
 
@@ -136,16 +137,17 @@ else:
     best.fit(x_train, y_train)
     
     print "*********************Save*******************************"
-    joblib.dump(best, "classifier_spm.pkl", compress=3)
+    if method != 'sift':
+        joblib.dump(best, "classifier_spm_%s.pkl"%method, compress=3)
             
 print "*********************Test*******************************"
 y_test_pre = best.predict(x_test)
 cm = confusion_matrix(y_test, y_test_pre)
 from map_confusion import plot_conf
-plot_conf(cm, range(le.classes_.size), 'RSDataset.png')
+plot_conf(cm, range(le.classes_.size), 'RSDataset_%s.png'%method)
 
 from sklearn.metrics import classification_report
-with file('report_spm.txt', 'w') as f:
+with file('report_spm_%s.txt'%method, 'w') as f:
     report = classification_report(y_test, y_test_pre, target_names = le.classes_)
     f.writelines(report)
 

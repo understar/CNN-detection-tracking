@@ -21,7 +21,7 @@ if __name__ == "__main__":
                     help = "path to the dataset file (*.pkl)")
     ap.add_argument("-s", "--save", required = True,
                     help = "patch for patches saving")    
-    ap.add_argument("-n", "--number", required = False, type = int, default = 40000,
+    ap.add_argument("-n", "--number", required = False, type = int, default = 100000,
                     help = "number of patches")
     ap.add_argument("-p", "--size", required = False, type = int, default = 16,
                     help = "number of patches")

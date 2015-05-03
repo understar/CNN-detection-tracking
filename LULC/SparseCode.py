@@ -53,8 +53,15 @@ class Sparsecode(BaseEstimator, TransformerMixin):
         else:
             data = np.load(self.patch_file,'r+') # load npy file, 注意模式，因为后面需要修改
         
+        data = np.require(data, dtype=np.float32)
+        
+        # Standardization
+        #logging.info("Pre-processing : Standardization...")
+        #self.standard = StandardScaler()
+        #data = self.standard.fit_transform(data)
+            
         # whiten
-        #print 'PCA Whiten...'
+        #logging.info("Pre-processing : PCA Whiten...")
         #self.pca = RandomizedPCA(copy=True, whiten=True)
         #data = self.pca.fit_transform(data)
         
@@ -62,10 +69,6 @@ class Sparsecode(BaseEstimator, TransformerMixin):
         self.minmax = MinMaxScaler()
         data = self.minmax.fit_transform(data)
         
-        # Standardization
-        #self.standard = StandardScaler()
-        #data = self.standard.fit_transform(data)
-
         #k-means
         self.kmeans = MiniBatchKMeans(n_clusters=self.n_components, init='k-means++', \
                                     max_iter=self.n_iter, batch_size=self.batch_size, verbose=1,\
@@ -98,7 +101,8 @@ class Sparsecode(BaseEstimator, TransformerMixin):
         #TODO: 是否一定需要先fit，才能transform
         X = self.minmax.fit_transform(X)
         
-        #X = self.standard.transform(X)
+        # -mean/std and whiten
+        #X = self.pca.transform(self.standard.transform(X))
 
         # MiniBatchDictionaryLearning
         # return self.dico.transform(X_whiten)

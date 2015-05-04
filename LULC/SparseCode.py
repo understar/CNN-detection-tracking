@@ -8,10 +8,11 @@ Created on Fri Apr 24 09:11:50 2015
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.externals import joblib
-from sklearn.decomposition import SparseCoder, MiniBatchDictionaryLearning, RandomizedPCA #白化以及字典
+from sklearn.decomposition import SparseCoder, MiniBatchDictionaryLearning #白化以及字典
 from sklearn.cluster import MiniBatchKMeans
 from sklearn.feature_extraction.image import extract_patches_2d
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
+from zca import ZCA
 
 from skimage.io import imread
 from skimage.color import rgb2gray
@@ -56,14 +57,19 @@ class Sparsecode(BaseEstimator, TransformerMixin):
         data = np.require(data, dtype=np.float32)
         
         # Standardization
-        logging.info("Pre-processing : Standardization...")
-        self.standard = StandardScaler()
-        data = self.standard.fit_transform(data)
+        #logging.info("Pre-processing : Standardization...")
+        #self.standard = StandardScaler()
+        #data = self.standard.fit_transform(data)
             
         # whiten
-        logging.info("Pre-processing : PCA Whiten...")
-        self.pca = RandomizedPCA(copy=True, whiten=True)
-        data = self.pca.fit_transform(data)
+        #logging.info("Pre-processing : PCA Whiten...")
+        #self.pca = RandomizedPCA(copy=True, whiten=True)
+        #data = self.pca.fit_transform(data)
+        
+        # whiten
+        logging.info("Pre-processing : ZCA Whiten...")
+        self.zca = ZCA()
+        data = self.zca.fit_transform(data)
         
         # 0-1 scaling 都可以用preprocessing模块实现
         #self.minmax = MinMaxScaler()
@@ -104,8 +110,11 @@ class Sparsecode(BaseEstimator, TransformerMixin):
         #X = self.minmax.fit_transform(X)
         
         # -mean/std and whiten
-        X = self.standard.transform(X)
-        X = self.pca.transform(X)
+        #X = self.standard.transform(X)
+        #X = self.pca.transform(X)
+        
+        # ZCA
+        X = self.zca.transform(X)
 
         # MiniBatchDictionaryLearning
         # return self.dico.transform(X_whiten)
@@ -151,11 +160,11 @@ if __name__ == "__main__":
     args = vars(ap.parse_args())
     
     patches = args["patches"]
-    sc = Sparsecode(patches, n_iter=500, batch_size=200, n_components=256)
+    sc = Sparsecode(patches, n_iter=100, batch_size=200, n_components=256)
     sc.fit()
     
     logging.info('Show Compoents...')
-    show(sc.pca.inverse_transform(sc.coder.components_), (16,16))
+    show(sc.coder.components_, (16,16))
     
     logging.info('Coding...')
     data = np.load(patches,'r+')[0:100]

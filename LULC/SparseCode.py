@@ -97,6 +97,8 @@ class Sparsecode(BaseEstimator, TransformerMixin):
                                            alpha=self.alpha, n_iter=self.n_iter, \
                                            batch_size =self.batch_size, verbose=True)
         self.coder.fit(data)
+        self.coder.transform_algorithm = 'omp'
+        self.coder.transform_alpha = self.alpha
         #'''
         return self
     
@@ -160,7 +162,7 @@ if __name__ == "__main__":
     args = vars(ap.parse_args())
     
     patches = args["patches"]
-    sc = Sparsecode(patches, n_iter=100, batch_size=200, n_components=256)
+    sc = Sparsecode(patches, n_iter=500, batch_size=256, n_components=512, alpha=1.2/16)
     sc.fit()
     
     logging.info('Show Compoents...')
@@ -169,7 +171,7 @@ if __name__ == "__main__":
     logging.info('Coding...')
     data = np.load(patches,'r+')[0:100]
     code = sc.transform(data)
-    
+    np.save('RSCodebook_%s.npy'%str(sc.coder.alpha), sc.coder.components_)
     """
     img = imread(str(x_test[0,0]))
     img = img_as_ubyte(rgb2gray(img)) 

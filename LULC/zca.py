@@ -6,7 +6,7 @@ Created on Fri Oct 10 09:36:44 2014
 """
  
 from sklearn.base import BaseEstimator, TransformerMixin
-from sklearn.utils import array2d, as_float_array
+from sklearn.utils import as_float_array
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -17,7 +17,7 @@ class ZCA(BaseEstimator, TransformerMixin):
         self.copy = copy
  
     def fit(self, X, y=None):
-        X = array2d(X)
+        # X = array2d(X)
         n_samples, n_features = X.shape
         X = as_float_array(X, copy=self.copy)
         self.mean_ = np.mean(X, axis=0)
@@ -36,7 +36,7 @@ class ZCA(BaseEstimator, TransformerMixin):
         return self
  
     def transform(self, X):
-        X = array2d(X)
+        X = np.require(X, dtype=np.float32)
         if self.mean_ is not None and self.std_ is not None:
             X -= self.mean_
             X /= self.std_

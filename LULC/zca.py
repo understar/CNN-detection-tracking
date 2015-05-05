@@ -19,7 +19,7 @@ class ZCA(BaseEstimator, TransformerMixin):
     def fit(self, X, y=None):
         # X = array2d(X)
         n_samples, n_features = X.shape
-        X = as_float_array(X, copy=self.copy)
+        X = as_float_array(X, copy=self.copy) #np.require(X, dtype=np.float32) #
         self.mean_ = np.mean(X, axis=0)
         self.std_ = np.std(X, axis=0)
         X -= self.mean_
@@ -36,7 +36,7 @@ class ZCA(BaseEstimator, TransformerMixin):
         return self
  
     def transform(self, X):
-        X = np.require(X, dtype=np.float32)
+        X = as_float_array(X, copy=self.copy) 
         if self.mean_ is not None and self.std_ is not None:
             X -= self.mean_
             X /= self.std_

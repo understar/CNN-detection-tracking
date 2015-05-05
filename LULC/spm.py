@@ -9,6 +9,7 @@ Created on Sat Apr 25 09:59:47 2015
 from sklearn.base import TransformerMixin
 import numpy as np
 from sklearn.cluster import MiniBatchKMeans
+from sklearn.externals import joblib
 from scipy.cluster.vq import vq
 from skimage.io import imread
 from skimage.color import rgb2gray
@@ -39,34 +40,41 @@ class SPMFeature(TransformerMixin):
     level: int
       the level of Spatial Pyramid Matching, default: 2
     """
-    def __init__(self, patch_file, level=2, clusters = 1024, size=16, method='sc'):
+    def __init__(self, patch_file, level=2, clusters = 1024, size=16, method='sc', exist=True):
         self.patch_file = patch_file
         self.clusters = clusters
         self.size = size
         self.method = method
         self.level = level
+        self.exist = exist
     
     def fit(self, X=None, y=None):
         self.kmeans = MiniBatchKMeans(n_clusters=self.clusters,
                                       n_init=10, verbose=1,
-                                      max_no_improvement=100,
-                                      reassignment_ratio=0.0001,
+                                      max_no_improvement=500,
+                                      reassignment_ratio=0.01,
+                                      batch_size = 200,
                                       random_state=np.random.RandomState(0))
-        
+
         X = np.load(self.patch_file,'r+')
-        
-        if self.method  == 'sift':
-            self.efm = SiftFeature(self.size)
-        elif self.method == 'sc':
-            self.efm = Sparsecode(patch_file=self.patch_file, n_components=384,
-                                  alpha = 1, n_iter=1000, batch_size=200)
-        elif self.method == 'raw':
-            self.efm = RawFeature()
+        if not self.exist:
+            if self.method  == 'sift': # sift²»ÄÜpickle
+                self.efm = SiftFeature(self.size)
+            elif self.method == 'sc':
+                self.efm = Sparsecode(patch_file=self.patch_file, n_components=384,
+                                      alpha = 1, n_iter=500, batch_size=200)
+            elif self.method == 'raw':
+                self.efm = RawFeature()
+            else:
+                self.efm = RawFeature()
+                
+            logging.info("Fit and Transform Feature Extraction Transformer.")
+            X = self.efm.fit_transform(X)
+            
         else:
-            self.efm = RawFeature()
-        
-        logging.info("Fit and Transform Feature Extraction Transformer.")
-        X = self.efm.fit_transform(X)
+            logging.info("Loading Feature Extraction Transformer.")
+            self.efm = joblib.load('efm/%s.pkl'%self.method)
+            X = self.efm.transform(X)            
         
         logging.info("SPM Learning K-means Clusters.")
         self.kmeans.fit(X)

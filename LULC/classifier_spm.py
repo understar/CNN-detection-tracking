@@ -21,6 +21,7 @@ from skimage.color import rgb2gray
 from skimage.util import img_as_ubyte
 from numpy.random import shuffle
 from spm import SPMFeature
+from SparseCode import Sparsecode, show
 
 import pickle as pkl
 import argparse
@@ -28,8 +29,7 @@ import time
 import logging
 logging.getLogger().setLevel(logging.INFO)
 
-
-# histogram intersection kernel
+""" histogram intersection kernel如何使用？
 def histogramIntersection(M, N):
     m = M.shape[0]
     n = N.shape[0]
@@ -42,7 +42,7 @@ def histogramIntersection(M, N):
 
     return result
 
-""" 如何使用？
+
 if kernelType == "HI":
 
         gramMatrix = histogramIntersection(trainData, trainData)

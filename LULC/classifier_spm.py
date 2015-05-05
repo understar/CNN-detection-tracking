@@ -26,7 +26,36 @@ import pickle as pkl
 import argparse
 import time
 import logging
-logging.getLogger().setLevel(logging.WARN)
+logging.getLogger().setLevel(logging.INFO)
+
+
+# histogram intersection kernel
+def histogramIntersection(M, N):
+    m = M.shape[0]
+    n = N.shape[0]
+
+    result = np.zeros((m,n))
+    for i in range(m):
+        for j in range(n):
+            temp = np.sum(np.minimum(M[i], N[j]))
+            result[i][j] = temp
+
+    return result
+
+""" 如何使用？
+if kernelType == "HI":
+
+        gramMatrix = histogramIntersection(trainData, trainData)
+        clf = SVC(kernel='precomputed')
+        clf.fit(gramMatrix, trainLabels)
+
+        predictMatrix = histogramIntersection(testData, trainData)
+        SVMResults = clf.predict(predictMatrix)
+        correct = sum(1.0 * (SVMResults == testLabels))
+        accuracy = correct / len(testLabels)
+        print "SVM (Histogram Intersection): " +str(accuracy)+ 
+              " (" +str(int(correct))+ "/" +str(len(testLabels))+ ")"
+"""
 
 """Arguments"""
 ap = argparse.ArgumentParser()
@@ -128,7 +157,7 @@ if args["search"] == 1:
     
 else:
     # 直接设置参数训练
-    method = 'raw'
+    method = 'sc'
     spm = SPMFeature(clusters=512, patch_file=patches, method=method)
     svm = SVC(kernel='linear', probability = True,random_state=42)
     clf = Pipeline([('spm', spm),('svm',svm)])

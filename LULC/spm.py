@@ -58,7 +58,8 @@ class SPMFeature(TransformerMixin):
         if self.method  == 'sift':
             self.efm = SiftFeature(self.size)
         elif self.method == 'sc':
-            self.efm = Sparsecode(patch_file=self.patch_file)
+            self.efm = Sparsecode(patch_file=self.patch_file, n_components=384,
+                                  alpha = 1, n_iter=1000, batch_size=200)
         elif self.method == 'raw':
             self.efm = RawFeature()
         else:
@@ -82,7 +83,7 @@ class SPMFeature(TransformerMixin):
             img = imread(name)
             img = img_as_ubyte(rgb2gray(img)) # 目前只处理灰度图像
             
-            logging.info("[%s] 1. Extract Dense Patches (Default Step is 16)." %time.ctime())
+            logging.info("[%s] 1. Extract Dense Patches (Default Step is 20)." %time.ctime())
             patches = self.extract_patches(img)
             
             logging.info("[%s] 2. Compute the feature for each patches."%time.ctime())

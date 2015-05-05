@@ -25,7 +25,7 @@ from sklearn.base import TransformerMixin,BaseEstimator
 
 class Sparsecode(BaseEstimator, TransformerMixin):
     def __init__(self, patch_file=None, patch_num=10000, patch_size=(16, 16),\
-                n_components=256,  alpha = 1, n_iter=2000, batch_size=100):
+                n_components=384,  alpha = 1, n_iter=1000, batch_size=200):
         self.patch_num = patch_num
         self.patch_size = patch_size
         self.patch_file = patch_file
@@ -98,7 +98,7 @@ class Sparsecode(BaseEstimator, TransformerMixin):
                                            batch_size =self.batch_size, verbose=True)
         self.coder.fit(data)
         self.coder.transform_algorithm = 'omp'
-        self.coder.transform_alpha = self.alpha
+        self.coder.transform_alpha = 0.001 # omp情况下，代表重建的误差
         #'''
         return self
     
@@ -162,7 +162,8 @@ if __name__ == "__main__":
     args = vars(ap.parse_args())
     
     patches = args["patches"]
-    sc = Sparsecode(patches, n_iter=500, batch_size=256, n_components=512, alpha=1.2/16)
+    # sparse param alpha = icml09 = 1.2/sqrt(input dims) = 1.2/16
+    sc = Sparsecode(patches, n_iter=100, batch_size=200, n_components=512, alpha=1)
     sc.fit()
     
     logging.info('Show Compoents...')
@@ -172,6 +173,7 @@ if __name__ == "__main__":
     data = np.load(patches,'r+')[0:100]
     code = sc.transform(data)
     np.save('RSCodebook_%s.npy'%str(sc.coder.alpha), sc.coder.components_)
+    joblib.dump(sc, 'RSSparsecode_%s.pkl'%str(sc.coder.alpha))
     """
     img = imread(str(x_test[0,0]))
     img = img_as_ubyte(rgb2gray(img)) 

@@ -158,7 +158,7 @@ if args["search"] == 1:
 else:
     # 直接设置参数训练
     method = 'sc'
-    spm = SPMFeature(clusters=1024, patch_file=patches, method=method)
+    spm = SPMFeature(clusters=256, patch_file=patches, method=method)
     svm = SVC(kernel='linear', probability = True,random_state=42)
     clf = Pipeline([('spm', spm),('svm',svm)])
 

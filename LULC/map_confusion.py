@@ -13,8 +13,11 @@ def norm_it(conf_arr):
         norm_conf.append(tmp_arr)
     return norm_conf
 
-def plot_conf(conf_arr, label_list, save_name='confusion_matrix.png'):
-    norm_conf = norm_it(conf_arr)
+def plot_conf(conf_arr, label_list, norm=True, save_name='confusion_matrix.png'):
+    if norm:    
+        norm_conf = norm_it(conf_arr)
+    else:
+        norm_conf = conf_arr.tolist()
     fig = plt.figure()
     plt.clf()
     ax = fig.add_subplot(111)
@@ -28,9 +31,14 @@ def plot_conf(conf_arr, label_list, save_name='confusion_matrix.png'):
     for x in xrange(width):
         for y in xrange(height):
             if norm_conf[x][y] != 0:
-                ax.annotate("{:3.2f}".format(norm_conf[x][y]), xy=(y, x), 
-                            horizontalalignment='center',
-                            verticalalignment='center')
+                if norm:
+                    ax.annotate("{:3.2f}".format(norm_conf[x][y]), xy=(y, x), 
+                                horizontalalignment='center',
+                                verticalalignment='center')
+                else:
+                    ax.annotate("%d"%norm_conf[x][y], xy=(y, x), 
+                                horizontalalignment='center',
+                                verticalalignment='center')
             #else:
             #    ax.annotate("0", xy=(y, x), 
             #                horizontalalignment='center',
@@ -56,4 +64,4 @@ if __name__ == '__main__':
                 [3,0,0,0,0,0,0,0,0,39,0], 
                 [0,0,0,0,0,0,0,0,0,0,38]]
     conf_arr = np.array(conf_arr)
-    plot_conf(conf_arr, range(26))
+    plot_conf(conf_arr, range(26), norm=False)

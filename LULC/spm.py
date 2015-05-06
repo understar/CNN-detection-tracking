@@ -10,6 +10,7 @@ from sklearn.base import TransformerMixin
 import numpy as np
 from sklearn.cluster import MiniBatchKMeans
 from sklearn.externals import joblib
+from sklearn.feature_extraction.image import extract_patches_2d
 from scipy.cluster.vq import vq
 from skimage.io import imread
 from skimage.color import rgb2gray
@@ -17,6 +18,7 @@ from skimage.util import img_as_ubyte
 from sift import SiftFeature
 from SparseCode import Sparsecode, show
 from raw import RawFeature
+from PIL import Image
 import logging
 import time
 import progressbar
@@ -41,7 +43,8 @@ class SPMFeature(TransformerMixin):
       the level of Spatial Pyramid Matching, default: 2
     """
     def __init__(self, patch_file=None, patch_num=100000, level=2, clusters=1024, 
-                 img_size=256, size=16, method='sc', exist=True):
+                 img_size=256, size=16, method='sc', exist=True,
+                 all_x=None):
         self.patch_file = patch_file
         self.patch_num = patch_num
         self.img_size = img_size
@@ -50,21 +53,43 @@ class SPMFeature(TransformerMixin):
         self.method = method
         self.level = level
         self.exist = exist
+        self.all_x = all_x
     
     def fit(self, X=None, y=None):
         self.kmeans = MiniBatchKMeans(n_clusters=self.clusters,
                                       n_init=10, verbose=1,
-                                      max_no_improvement=500,
+                                      max_no_improvement=100,
                                       reassignment_ratio=0.01,
-                                      batch_size = 200,
-                                      random_state=np.random.RandomState(0))
+                                      batch_size = 300,
+                                      random_state=np.random.RandomState(42))
 
-        X = np.load(self.patch_file,'r+')
+        
+        if self.patch_file is None:
+            logging.info("Extract Patches for training...")
+            num = self.patch_num // self.all_x.size
+            data = []
+            for item in self.all_x:
+                img = imread(str(item[0]))
+                img = img_as_ubyte(rgb2gray(img))
+                if self.img_size != img.shape[0]:
+                    img = self.resize(img, (self.img_size, self.img_size))
+                tmp = extract_patches_2d(img, (self.size, self.size),
+                                         max_patches = num,
+                                         random_state=np.random.RandomState())
+                data.append(tmp)
+            
+            data = np.vstack(data)
+            data = data.reshape(data.shape[0], -1)
+            data = np.asarray(data, 'float32')
+        else:
+            data = np.load(self.patch_file,'r+') # load npy file, 注意模式，因为后面需要修改
+        
+        data = np.require(data, dtype=np.float32)
         
         if self.method  == 'sift': # sift不能pickle，由于cv2的原因
             self.efm = SiftFeature(self.size)
             logging.info("Fit and Transform Feature Extraction Transformer.")
-            X = self.efm.fit_transform(X)
+            data = self.efm.fit_transform(data)
             
         elif not self.exist:
             if self.method == 'sc': # 主要是sc需要pickle，训练太耗时
@@ -79,15 +104,15 @@ class SPMFeature(TransformerMixin):
                 self.efm = RawFeature()
                 
             logging.info("Fit and Transform Feature Extraction Transformer.")
-            X = self.efm.fit_transform(X)
+            data = self.efm.fit_transform(data)
             
         else:
             logging.info("Loading Feature Extraction Transformer.")
             self.efm = joblib.load('efm/%s.pkl'%self.method)
-            X = self.efm.transform(X)            
+            data = self.efm.transform(data)            
         
         logging.info("SPM Learning K-means Clusters.")
-        self.kmeans.fit(X)
+        self.kmeans.fit(data)
         return self
     
     def transform(self, X):
@@ -100,8 +125,10 @@ class SPMFeature(TransformerMixin):
             logging.info("Processing %s." % name)
             img = imread(name)
             img = img_as_ubyte(rgb2gray(img)) # 目前只处理灰度图像
+            if self.img_size != img.shape[0]:
+                img = self.resize(img, (self.img_size, self.img_size))
             
-            logging.info("[%s] 1. Extract Dense Patches (Default Step is 20)." %time.ctime())
+            logging.info("[%s] 1. Extract Dense Patches (Default Step is 8)." %time.ctime())
             patches = self.extract_patches(img)
             
             logging.info("[%s] 2. Compute the feature for each patches."%time.ctime())
@@ -118,7 +145,7 @@ class SPMFeature(TransformerMixin):
         pbar.finish()
         return np.vstack(results)
         
-    def extract_patches(self, arr, steps=20):
+    def extract_patches(self, arr, steps=8):
         m, n = arr.shape
         x,y = np.meshgrid(range(0,m-self.size+1,steps),
                           range(0,n-self.size+1,steps))
@@ -176,10 +203,21 @@ class SPMFeature(TransformerMixin):
         else:
             return None
         
+    def resize(self, img, size):
+        """
+        img : numpy array
+        size : new image size, (width, height)
+        """
+        tmp = Image.fromarray(img)
+        tmp = tmp.resize(size)
+        return np.array(tmp)
+        
     def get_params(self, deep=True):
         return {"clusters": self.clusters,
                 "method":self.method,
-                "level":self.level}
+                "level":self.level,
+                "img_size":self.img_size,
+                "patch_file":self.patch_file}
         
     def set_params(self, **parameters):
         for parameter, value in parameters.items():

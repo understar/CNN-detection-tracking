@@ -40,8 +40,11 @@ class SPMFeature(TransformerMixin):
     level: int
       the level of Spatial Pyramid Matching, default: 2
     """
-    def __init__(self, patch_file, level=2, clusters = 1024, size=16, method='sc', exist=True):
+    def __init__(self, patch_file=None, patch_num=100000, level=2, clusters=1024, 
+                 img_size=256, size=16, method='sc', exist=True):
         self.patch_file = patch_file
+        self.patch_num = patch_num
+        self.img_size = img_size
         self.clusters = clusters
         self.size = size
         self.method = method
@@ -57,12 +60,19 @@ class SPMFeature(TransformerMixin):
                                       random_state=np.random.RandomState(0))
 
         X = np.load(self.patch_file,'r+')
-        if not self.exist:
-            if self.method  == 'sift': # sift不能pickle
-                self.efm = SiftFeature(self.size)
-            elif self.method == 'sc':
+        
+        if self.method  == 'sift': # sift不能pickle，由于cv2的原因
+            self.efm = SiftFeature(self.size)
+            logging.info("Fit and Transform Feature Extraction Transformer.")
+            X = self.efm.fit_transform(X)
+            
+        elif not self.exist:
+            if self.method == 'sc': # 主要是sc需要pickle，训练太耗时
                 self.efm = Sparsecode(patch_file=self.patch_file, n_components=384,
                                       alpha = 1, n_iter=500, batch_size=200)
+                
+                self.efm.coder.split_sign=True
+                
             elif self.method == 'raw':
                 self.efm = RawFeature()
             else:
@@ -113,7 +123,7 @@ class SPMFeature(TransformerMixin):
         x,y = np.meshgrid(range(0,m-self.size+1,steps),
                           range(0,n-self.size+1,steps))
         xx,yy = x.flatten(),y.flatten()
-        return [(i,j,arr[i:i+self.size,j:j+self.size].flatten()) for i,j in zip(xx,yy)]
+        return [(i+self.size//2,j+self.size//2,arr[i:i+self.size,j:j+self.size].flatten()) for i,j in zip(xx,yy)]
         
     
     def buildHistogramForEachImageAtDifferentLevels(self, arr, ftrs, level=2):

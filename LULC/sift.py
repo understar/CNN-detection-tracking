@@ -30,8 +30,8 @@ class SiftFeature(TransformerMixin):
         results = []
         for sample in X:
             tmp = np.require(sample.reshape(self.size, self.size),dtype=np.ubyte)
-            # 检测点，固定size，固定angle
-            kp = cv2.KeyPoint(self.size//2, self.size//2, self.size, _angle=0)
+            # 检测点，固定size，固定angle -1必须要为-1，不然就会导致他会规划到统一方向
+            kp = cv2.KeyPoint(self.size//2, self.size//2, self.size) 
             _, desc = self.sift.compute(tmp,[kp])
             desc = self.normalizeSIFT(desc)
             results.append(desc)
@@ -58,9 +58,9 @@ class SiftFeature(TransformerMixin):
         return descriptor
 
 if __name__ == "__main__":
-    from skimage.data import camera
+    from skimage.data import coins
     from sklearn.feature_extraction.image import extract_patches_2d
-    img = camera()
+    img = coins()
     patches = extract_patches_2d(img, (16,16),100,np.random.RandomState())
     
     patches = patches.reshape(patches.shape[0], -1)

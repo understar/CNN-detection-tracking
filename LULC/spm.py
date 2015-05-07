@@ -42,8 +42,8 @@ class SPMFeature(TransformerMixin):
     level: int
       the level of Spatial Pyramid Matching, default: 2
     """
-    def __init__(self, patch_file=None, patch_num=100000, level=2, clusters=1024, 
-                 img_size=256, size=16, method='sc', exist=True,
+    def __init__(self, patch_file=None, patch_num=60000, level=2, clusters=1024, 
+                 img_size=256, size=16, method='sc', exist=True, kernel_hi=True,
                  all_x=None):
         self.patch_file = patch_file
         self.patch_num = patch_num
@@ -54,6 +54,8 @@ class SPMFeature(TransformerMixin):
         self.level = level
         self.exist = exist
         self.all_x = all_x
+        self.train_data = None
+        self.kernel_hi = kernel_hi
     
     def fit(self, X=None, y=None):
         self.kmeans = MiniBatchKMeans(n_clusters=self.clusters,
@@ -129,7 +131,7 @@ class SPMFeature(TransformerMixin):
                 img = self.resize(img, (self.img_size, self.img_size))
             
             logging.info("[%s] 1. Extract Dense Patches (Default Step is 8)." %time.ctime())
-            patches = self.extract_patches(img)
+            patches = self.extract_patches(img, 4)
             
             logging.info("[%s] 2. Compute the feature for each patches."%time.ctime())
             tmp = np.array([i for x,y,i in patches])
@@ -143,8 +145,16 @@ class SPMFeature(TransformerMixin):
             cnt = cnt + 1
                 
         pbar.finish()
-        return np.vstack(results)
-        
+        results = np.vstack(results)
+        if self.kernel_hi:
+            if self.train_data is None:
+                self.train_data = results
+                return self.histogramIntersection(results, self.train_data)
+            else:
+                return self.histogramIntersection(results, self.train_data)
+        else:
+            return results
+            
     def extract_patches(self, arr, steps=8):
         m, n = arr.shape
         x,y = np.meshgrid(range(0,m-self.size+1,steps),
@@ -223,3 +233,15 @@ class SPMFeature(TransformerMixin):
         for parameter, value in parameters.items():
             self.__setattr__(parameter, value)
         return self
+    
+    def histogramIntersection(self, M, N):
+        m = M.shape[0]
+        n = N.shape[0]
+    
+        result = np.zeros((m,n))
+        for i in range(m):
+            for j in range(n):
+                temp = np.sum(np.minimum(M[i], N[j]))
+                result[i][j] = temp
+    
+        return result

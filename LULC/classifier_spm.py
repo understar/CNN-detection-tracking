@@ -27,21 +27,9 @@ import pickle as pkl
 import argparse
 import time
 import logging
-logging.getLogger().setLevel(logging.INFO)
+logging.getLogger().setLevel(logging.WARN)
 
 """ histogram intersection kernel如何使用？
-def histogramIntersection(M, N):
-    m = M.shape[0]
-    n = N.shape[0]
-
-    result = np.zeros((m,n))
-    for i in range(m):
-        for j in range(n):
-            temp = np.sum(np.minimum(M[i], N[j]))
-            result[i][j] = temp
-
-    return result
-
 
 if kernelType == "HI":
 
@@ -136,7 +124,7 @@ if args["search"] == 1:
     clf = Pipeline([('spm', spm),('svm',svm)])
     
     params = {
-            "svm__C": [1],
+            "svm__C": [0.01, 1, 100],
             "spm__clusters": [256, 512, 1024]
             }
 
@@ -171,8 +159,13 @@ else:
     # 直接设置参数训练
     method = 'sift'
     spm = SPMFeature(clusters=args['clusters'], patch_file=None,
-                     method=method, img_size=args['imgsize'],all_x=all_x)
-    svm = SVC(kernel='linear', probability = True,random_state=42)
+                     method=method, img_size=args['imgsize'],
+                     all_x=all_x, kernel_hi=False, level=2,
+                     patch_num=200000)
+    if spm.kernel_hi:
+        svm = SVC(kernel='precomputed', probability = True,random_state=42)
+    else:
+        svm = SVC(kernel='linear', probability = True,random_state=42)
     clf = Pipeline([('spm', spm),('svm',svm)])
 
     best = Pipeline([('spm', spm),('svm',svm)])
@@ -185,6 +178,9 @@ else:
 print "*********************Test*******************************"
 spm = best.named_steps['spm']
 y_test_pre = best.predict(x_test)
+
+from sklearn.metrics import accuracy_score
+print "Accuracy:", accuracy_score(y_test, y_test_pre)
 cm = confusion_matrix(y_test, y_test_pre)
 np.save('RS_results/RSDataset_%s_%s_%s.npy'%(method, spm.clusters, spm.img_size), cm)
 from map_confusion import plot_conf

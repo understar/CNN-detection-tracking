@@ -61,12 +61,15 @@ if kernelType == "HI":
 ap = argparse.ArgumentParser()
 ap.add_argument("-d", "--dataset", required = True,
 	help = "path to the dataset file (*.pkl)")
-ap.add_argument("-p", "--patches", required = True,
-	help = "path to the patches file (*.npy)")
+ap.add_argument("-p", "--patches", help = "path to the patches file (*.npy)")
 ap.add_argument("-t", "--test", required = True, type = float,
 	help = "size of test split")
-ap.add_argument("-s", "--search", type = int, default = 0,
+ap.add_argument("-s", "--search", required = True, type = int, default = 0,
 	help = "whether or not a grid search should be performed")
+ap.add_argument("-c", "--clusters", type = int, default = 256,
+	help = "k-means clusters") 
+ap.add_argument("-i", "--imgsize", type = int, default = 600,
+	help = "image size") 
 args = vars(ap.parse_args())
 
 dataset = pkl.load(file(args["dataset"], 'rb'))
@@ -82,7 +85,7 @@ x_train=[]
 x_test=[]
 y_train=[]
 y_test=[]
-
+all_x=[]
 for k,v in dataset.items():
     print "Processing", k
     X = []
@@ -92,6 +95,8 @@ for k,v in dataset.items():
         X.append(item)
     Y = le.transform(Y)
     X = np.vstack(X)
+    
+    all_x.append(X)    
     
     # 按比例划分训练与测试样本集
     tmp_x_train, tmp_x_test, tmp_y_train, tmp_y_test = train_test_split(X, Y, 
@@ -119,14 +124,20 @@ shuffle(index)
 x_test = x_test[index,:]
 y_test = y_test[index]
 
+all_x = np.vstack(all_x)
+index = np.arange(all_x.shape[0])
+shuffle(index)
+all_x = all_x[index]
+
 if args["search"] == 1:
-    spm = SPMFeature(patch_file=patches)
+    method = 'sift'
+    spm = SPMFeature(patch_file=patches, method=method, all_x=all_x, img_size=600)
     svm = SVC(kernel='linear', probability = True,random_state=42)
     clf = Pipeline([('spm', spm),('svm',svm)])
     
     params = {
-            "svm__C": [100],
-            "spm__method": ['raw', 'sc', 'sift']
+            "svm__C": [1],
+            "spm__clusters": [256, 512, 1024]
             }
 
     
@@ -141,7 +152,7 @@ if args["search"] == 1:
     # best model
     print "\ndone in %0.3fs" % (time.time() - start)
     print "best score: %0.3f" % (gs.best_score_)
-    print "BOW + LOGISTIC REGRESSION PARAMETERS"
+    print "SPM + SVM PARAMETERS"
     bestParams = gs.best_estimator_.get_params()
 
     # loop over the parameters and print each of them out
@@ -152,13 +163,15 @@ if args["search"] == 1:
     best = gs.best_estimator_
     
     print "*********************Save*******************************"
-    joblib.dump(best, "classifier_spm.pkl", compress=3)
-    joblib.dump(gs, "grid_cv_spm.pkl", compress=3)
+    if method != 'sift':
+        joblib.dump(best, "classifier_spm.pkl", compress=3)
+        joblib.dump(gs, "grid_cv_spm.pkl", compress=3)
     
 else:
     # 直接设置参数训练
-    method = 'sc'
-    spm = SPMFeature(clusters=256, patch_file=patches, method=method)
+    method = 'sift'
+    spm = SPMFeature(clusters=args['clusters'], patch_file=None,
+                     method=method, img_size=args['imgsize'],all_x=all_x)
     svm = SVC(kernel='linear', probability = True,random_state=42)
     clf = Pipeline([('spm', spm),('svm',svm)])
 
@@ -170,13 +183,16 @@ else:
         joblib.dump(best, "classifier_spm_%s.pkl"%method, compress=3)
             
 print "*********************Test*******************************"
+spm = best.named_steps['spm']
 y_test_pre = best.predict(x_test)
 cm = confusion_matrix(y_test, y_test_pre)
+np.save('RS_results/RSDataset_%s_%s_%s.npy'%(method, spm.clusters, spm.img_size), cm)
 from map_confusion import plot_conf
-plot_conf(cm, range(le.classes_.size), 'RSDataset_%s.png'%method)
+plot_conf(conf_arr=cm, label_list=range(le.classes_.size), 
+          norm=False, save_name='RS_results/RSDataset_%s_%s_%s.png'%(method, spm.clusters, spm.img_size))
 
 from sklearn.metrics import classification_report
-with file('report_spm_%s.txt'%method, 'w') as f:
+with file('RS_results/report_spm_%s_%s_%s.txt'%(method, spm.clusters, spm.img_size), 'w') as f:
     report = classification_report(y_test, y_test_pre, target_names = le.classes_)
     f.writelines(report)
 

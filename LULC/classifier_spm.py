@@ -32,7 +32,6 @@ logging.getLogger().setLevel(logging.WARN)
 """ histogram intersection kernel如何使用？
 
 if kernelType == "HI":
-
         gramMatrix = histogramIntersection(trainData, trainData)
         clf = SVC(kernel='precomputed')
         clf.fit(gramMatrix, trainLabels)
@@ -161,7 +160,7 @@ else:
     spm = SPMFeature(clusters=args['clusters'], patch_file=None,
                      method=method, img_size=args['imgsize'],
                      all_x=all_x, kernel_hi=False, level=2,
-                     patch_num=200000)
+                     patch_num=100000)
     if spm.kernel_hi:
         svm = SVC(kernel='precomputed', probability = True,random_state=42)
     else:

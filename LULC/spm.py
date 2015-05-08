@@ -12,6 +12,7 @@ from sklearn.cluster import MiniBatchKMeans
 from sklearn.externals import joblib
 from sklearn.feature_extraction.image import extract_patches_2d
 from scipy.cluster.vq import vq
+from PIL import Image
 from skimage.io import imread
 from skimage.color import rgb2gray
 from skimage.util import img_as_ubyte
@@ -42,7 +43,7 @@ class SPMFeature(TransformerMixin):
     level: int
       the level of Spatial Pyramid Matching, default: 2
     """
-    def __init__(self, patch_file=None, patch_num=60000, level=2, clusters=1024, 
+    def __init__(self, patch_file=None, patch_num=100000, level=2, clusters=1024, 
                  img_size=256, size=16, method='sc', exist=True, kernel_hi=True,
                  all_x=None):
         self.patch_file = patch_file
@@ -71,10 +72,18 @@ class SPMFeature(TransformerMixin):
             num = self.patch_num // self.all_x.size
             data = []
             for item in self.all_x:
+                img = Image.open(str(item[0])).convert('L')
+                if self.img_size != img.size[0]:
+                    img = img.resize((self.img_size, self.img_size))
+                img = np.array(img)
+                
+                """ scikit-image
                 img = imread(str(item[0]))
                 img = img_as_ubyte(rgb2gray(img))
                 if self.img_size != img.shape[0]:
                     img = self.resize(img, (self.img_size, self.img_size))
+                """    
+                    
                 tmp = extract_patches_2d(img, (self.size, self.size),
                                          max_patches = num,
                                          random_state=np.random.RandomState())
@@ -125,10 +134,17 @@ class SPMFeature(TransformerMixin):
         for sample in X:
             name = str(sample[0])
             logging.info("Processing %s." % name)
+            img = Image.open(name).convert('L')
+            if self.img_size != img.size[0]:
+                img = img.resize((self.img_size, self.img_size))
+            img = np.array(img)
+            
+            """scikit-image
             img = imread(name)
             img = img_as_ubyte(rgb2gray(img)) # 目前只处理灰度图像
             if self.img_size != img.shape[0]:
                 img = self.resize(img, (self.img_size, self.img_size))
+            """
             
             logging.info("[%s] 1. Extract Dense Patches (Default Step is 8)." %time.ctime())
             patches = self.extract_patches(img, 4)

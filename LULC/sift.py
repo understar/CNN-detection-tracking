@@ -30,8 +30,8 @@ class SiftFeature(TransformerMixin):
         results = []
         for sample in X:
             tmp = np.require(sample.reshape(self.size, self.size),dtype=np.ubyte)
-            # 检测点，固定size，固定angle -1必须要为-1，不然就会导致他会规划到统一方向
-            kp = cv2.KeyPoint(self.size//2, self.size//2, self.size) 
+            # 检测点，固定size，固定angle -1
+            kp = cv2.KeyPoint(self.size//2, self.size//2, self.size) #
             _, desc = self.sift.compute(tmp,[kp])
             desc = self.normalizeSIFT(desc)
             results.append(desc)

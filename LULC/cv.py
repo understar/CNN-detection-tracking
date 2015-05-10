@@ -62,8 +62,13 @@ else:
     cv = StratifiedShuffleSplit(y=all_y, n_iter=10, test_size=0.4)
     clf = SVC(kernel='linear', probability = True,random_state=42)
     scores = cross_val_score(clf, all_x, all_y, cv=cv, verbose=1)
-    print "Scores mesn:", scores.mean()
-    print "Scores std:", scores.std()
+    
+    f = open("RS_results/{0}_{1}_{2}.txt".format(args['dataset'][0:-4],args['clusters'], args['imgsize']), 'w')
+    f.writelines("Accuracy: %0.2f (+/- %0.2f)" % (scores.mean(), scores.std() * 2))
+    f.close()
+    
+    np.save("RS_results/{0}_{1}_{2}.npy".format(args['dataset'][0:-4],args['clusters'], args['imgsize']),scores)
+    print("Accuracy: %0.2f (+/- %0.2f)" % (scores.mean(), scores.std() * 2))
     
 """
 svc = svm.SVC(kernel='linear')

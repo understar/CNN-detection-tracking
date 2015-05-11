@@ -78,7 +78,7 @@ if True:
             key = "{0}_{1}".format(c, i)   
             fpath = "{0}_{1}_{2}.pkl".format(args['dataset'][0:-4], c, i)
             print "CV :", c, i
-            all_ftrs = joblib.load(fpath, 'r+')
+            all_ftrs = joblib.load(fpath, 'r')
             # 遍历数据集
             all_x=[]
             all_y=[]
@@ -110,9 +110,9 @@ if True:
                 clf = SVC(C=1, kernel='linear', probability = True, random_state=42)
                 clf.fit(train_x, train_y)
                 pre_y = clf.predict(test_x)
-                precision.append(precision_score(test_y, pre_y))
-                recall.append(recall_score(test_y, pre_y))
-                f1.append(f1_score(test_y, pre_y))
+                precision.append(precision_score(test_y, pre_y, average=None))
+                recall.append(recall_score(test_y, pre_y, average=None))
+                f1.append(f1_score(test_y, pre_y, average=None))
                 pbar.update(cnt+1)
                 cnt = cnt + 1
             

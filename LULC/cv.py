@@ -60,15 +60,17 @@ else:
     all_y = np.hstack(all_y)
     
     cv = StratifiedShuffleSplit(y=all_y, n_iter=10, test_size=0.4)
-    clf = SVC(kernel='linear', probability = True,random_state=42)
-    scores = cross_val_score(clf, all_x, all_y, cv=cv, verbose=1)
+    for c in [0.01]:
+        clf = SVC(C=c, kernel='linear', probability = True,random_state=42)
+        scores = cross_val_score(clf, all_x, all_y, cv=cv, verbose=1)
+        print("Accuracy-%0.3f : %0.3f (+/- %0.3f)" % (c, scores.mean(), scores.std() * 2))
+    if False:
+        f = open("RS_results/{0}_{1}_{2}.txt".format(args['dataset'][0:-4],args['clusters'], args['imgsize']), 'w')
+        f.writelines("Accuracy: %0.3f (+/- %0.3f)" % (scores.mean(), scores.std() * 2))
+        f.close()
+        
+        np.save("RS_results/{0}_{1}_{2}.npy".format(args['dataset'][0:-4],args['clusters'], args['imgsize']),scores)
     
-    f = open("RS_results/{0}_{1}_{2}.txt".format(args['dataset'][0:-4],args['clusters'], args['imgsize']), 'w')
-    f.writelines("Accuracy: %0.2f (+/- %0.2f)" % (scores.mean(), scores.std() * 2))
-    f.close()
-    
-    np.save("RS_results/{0}_{1}_{2}.npy".format(args['dataset'][0:-4],args['clusters'], args['imgsize']),scores)
-    print("Accuracy: %0.2f (+/- %0.2f)" % (scores.mean(), scores.std() * 2))
     
 """
 svc = svm.SVC(kernel='linear')

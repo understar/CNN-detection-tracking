@@ -25,7 +25,9 @@ ap.add_argument("-c", "--clusters", type = int, default = 1000,
 	help = "k-means clusters") 
 ap.add_argument("-i", "--imgsize", type = int, default = 600,
 	help = "image size") 
-
+ap.add_argument("-n", "--iter", type = int, default = 10,
+	help = "n iter") 
+ 
 args = vars(ap.parse_args())
 fpath = "{0}_{1}_{2}.pkl".format(args['dataset'][0:-4],args['clusters'], args['imgsize'])
 
@@ -59,12 +61,12 @@ else:
     all_x = np.vstack(all_x)
     all_y = np.hstack(all_y)
     
-    cv = StratifiedShuffleSplit(y=all_y, n_iter=10, test_size=0.4)
-    for c in [0.01]:
+    cv = StratifiedShuffleSplit(y=all_y, n_iter=args['iter'], test_size=0.4)
+    for c in [1]:
         clf = SVC(C=c, kernel='linear', probability = True,random_state=42)
         scores = cross_val_score(clf, all_x, all_y, cv=cv, verbose=1)
         print("Accuracy-%0.3f : %0.3f (+/- %0.3f)" % (c, scores.mean(), scores.std() * 2))
-    if False:
+    if True:
         f = open("RS_results/{0}_{1}_{2}.txt".format(args['dataset'][0:-4],args['clusters'], args['imgsize']), 'w')
         f.writelines("Accuracy: %0.3f (+/- %0.3f)" % (scores.mean(), scores.std() * 2))
         f.close()

@@ -53,31 +53,31 @@ if False:
     all_ents = {}
     for k,v in dataset.items():
         print "Processing", k
-        all_ents[k] = {}
         for c in clusters:
             for i in imgsize:
                 tmp = 0
-                key = "{0}_{1}".format(c, i)    
+                key = "{0}_{1}".format(c, i)
+                if not all_ents.has_key(key):
+                    all_ents[key] = {}
                 for item in v:
                     im = Image.open(item).convert('L')
                     if im.size[0] != i:
                         im = im.resize((i, i))
                     tmp += entropy(im)
-                all_ents[k][key] = tmp/len(v)
+                all_ents[key][k] = tmp/len(v)
     
     print "Computing ALL Avg."
-    all_ents['all']={}
     for c in clusters:
         for i in imgsize:
             tmp = 0
             key = "{0}_{1}".format(c, i)   
             for k,v in dataset.items():
-                tmp += all_ents[k][key]
-            all_ents['all'][key] = tmp/19
+                tmp += all_ents[key][k]
+            all_ents[key]['all'] = tmp/19
     
     joblib.dump(value=all_ents, filename='RSDataset_entropy.pkl', compress=3)
 
-if True:
+if False:
     c=args['clusters']
     i=args['imgsize']
     all_results = {}
@@ -132,3 +132,31 @@ if True:
     joblib.dump(value={"cv":all_results, "LabelEncoder":le}, filename='RSDataset_cv_%s.pkl'%key, compress=3)
     #print("Accuracy-%0.3f : %0.3f (+/- %0.3f)" % (c, scores.mean(), scores.std() * 2))
     
+if True:
+    # TODO: 分析各种相关性
+    clusters = [1000]
+    imgsize = [100,150,200,250,300,350,400,450,500,550,600]
+    
+    print "Loading Entropy..."
+    all_ents = joblib.load('RSDataset_entropy.pkl')
+    print "Loading CV..."
+    all_precision = {}
+    all_recall = {}
+    all_f1 = {}
+    for c in clusters:
+        for i in imgsize:
+            key = "{0}_{1}".format(c, i)
+            if not all_precision.has_key(key):
+                all_precision[key] = {}
+                all_recall[key] = {}
+                all_f1[key] = {}
+            fname = 'RSDataset_cv_%s.pkl'%key
+            cv = joblib.load(fname)['cv']
+            for i in range(19):
+                print "Precision, Recall, F1 Loading..."
+                k = str(le.inverse_transform([i])[0])
+                all_precision[key][k] = cv['precision'][:,i]
+                all_recall[key][k] = cv['recall'][:,i]
+                all_f1[key][k] = cv['f1'][:,i]
+                
+    #TODO: 数据准备好，进行数据分析

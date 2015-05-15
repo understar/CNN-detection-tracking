@@ -45,9 +45,15 @@ def plot_conf(conf_arr, label_list, norm=True, save_name='confusion_matrix.png')
             #                verticalalignment='center')
                             
     fig.colorbar(res)
-    alphabet = label_list
-    plt.xticks(range(width), alphabet[:width])
-    plt.yticks(range(height), alphabet[:height])
+    tick_marks = np.arange(len(label_list))
+    plt.xticks(tick_marks, label_list, rotation=90)
+    plt.yticks(tick_marks, label_list)
+    plt.tight_layout()
+    plt.ylabel('True label')
+    plt.xlabel('Predicted label')
+    #alphabet = label_list
+    #plt.xticks(range(width), alphabet[:width])
+    #plt.yticks(range(height), alphabet[:height])
     plt.savefig(save_name, format='png')
     
 if __name__ == '__main__':
@@ -64,4 +70,4 @@ if __name__ == '__main__':
                 [3,0,0,0,0,0,0,0,0,39,0], 
                 [0,0,0,0,0,0,0,0,0,0,38]]
     conf_arr = np.array(conf_arr)
-    plot_conf(conf_arr, range(26), norm=False)
+    plot_conf(conf_arr, range(11), norm=True)

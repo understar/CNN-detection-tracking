@@ -40,12 +40,22 @@ import matplotlib.pyplot as plt
 import pylab
 from scipy.stats import pearsonr
 
-def figit(x, y, k):
+def figit_ent(x, y, k):
+    print "[Entropy] Corr. of %s: %s" % (k, pearsonr(x[k], y[k])[0])
+    print "[Entropy] Mean:", mean(x[k])
+    print "[F1] Mean:", mean(y[k])
     plt.figure()
     plt.plot(x[k], y[k], 'bo-')
     plt.title(k)
     plt.show()
 
+def figit_size(x, y, k):
+    print "[Size] Corr. of %s: %s" % (k, pearsonr(x, y[k])[0])
+    plt.figure()
+    plt.plot(x, y[k], 'bo-')
+    plt.title(k)
+    plt.show()
+    
 """Arguments"""
 ap = argparse.ArgumentParser()
 ap.add_argument("-d", "--dataset", required = True,
@@ -98,7 +108,7 @@ if False:
     
     joblib.dump(value=all_ents, filename='RSDataset_entropy.pkl', compress=3)
 
-if True:
+if False:
     c=args['clusters']
     i=args['imgsize']
     all_results = {}
@@ -154,7 +164,7 @@ if True:
     joblib.dump(value={"cv":all_results, "LabelEncoder":le}, filename='RSDataset_cv_%s.pkl'%key, compress=3)
     #print("Accuracy-%0.3f : %0.3f (+/- %0.3f)" % (c, scores.mean(), scores.std() * 2))
     
-if False:
+if True:
     # TODO: 分析各种相关性
     clusters = [1000]
     imgsize = [100,150,200,250,300,350,400,450,500,550,600]
@@ -231,21 +241,30 @@ if False:
     fit_fn = pylab.poly1d(fit) 
     print "熵与总体分类精度之间的相关系数：", pearsonr(x_entropy_all, y_scores_all)
     
+    from scipy.optimize import curve_fit
+    def func(x,a,b):
+       return a*np.log(b*x)
+
+    popt,pcov = curve_fit(func, x_size, x_entropy_all)
+    #y_fit = np.exp(popt[0]*x) 
+    
     # 整体上
     plt.figure()
     plt.subplot(131)
-    plt.plot(x_size, y_scores_all,'bo-')
+    plt.plot(x_size, y_scores_all,'o-')
     plt.title("Size-Acc")
     
     plt.subplot(132)
-    plt.plot(x_entropy_all, y_scores_all,'ro-', 
+    plt.plot(x_entropy_all, y_scores_all,'o-', 
              x_entropy_all, fit_fn(x_entropy_all), '--k')
     plt.title("Entropy-Acc")
     
     plt.subplot(133)
-    plt.plot(x_size, x_entropy_all,'go-')
-    plt.title("Size-Entropy")    
+    plt.plot(x_size, x_entropy_all,'o-')
+             #x_size, func(np.array(x_size), popt[0], popt[1]), '--k')
+    plt.title("Size-Entropy") 
     
+    plt.tight_layout()
     plt.show()
     
     # 一个简单的设想是熵才是关键觉得因素
@@ -260,11 +279,71 @@ if False:
     
     plt.figure()
     plt.scatter(x_all_entropy, y_all_precision)
-    plt.title('Entropy-Precision')
+    plt.title('Entropy-Precision (ALL)')
     plt.show()
     
+    #相关系数bar图
+    corr_all = []
+    for k in le.classes_.tolist():
+        corr_all.append(pearsonr(x_entropy[k], y_scores_f1[k])[0])
+    plt.figure()
+    width = 0.5
+    tick_marks = np.arange(len(le.classes_.tolist()))
+    plt.bar(tick_marks, corr_all, width, color='r')
+    plt.xticks(tick_marks+width/2, le.classes_.tolist(), rotation=90)
+    plt.ylabel('Correlation coefficient')    
+    plt.tight_layout()
+    plt.ylim(-1,1)
+    plt.show()
     # 各类的情况
     # 整体上有大部分是随着熵的增加有增长趋势
     # 是不是10次太少的原因，统计力度不够???
-    for k in x_entropy.keys():
-        figit(x_entropy, y_scores_f1, k)
+    #for k in x_entropy.keys():
+    #    figit_ent(x_entropy, y_scores_f1, k)
+    #    #figit_size(x_size, y_scores_f1, k)
+        
+if False:
+    # confusion matrix
+    fpath = "{0}_{1}_{2}.pkl".format(args['dataset'][0:-4],args['clusters'], args['imgsize'])
+
+    all_ftrs = joblib.load(fpath, 'r+')
+    # 遍历数据集
+    all_x=[]
+    all_y=[]
+    for k,v in all_ftrs.items():
+        print "Loading features", k
+        X = []
+        Y = []
+        for item in v:
+            Y.append(k)
+            X.append(item)
+        Y = le.transform(Y)
+        X = np.vstack(X)
+        all_x.append(X)
+        all_y.append(Y)
+        
+    all_x = np.vstack(all_x)
+    all_y = np.hstack(all_y)
+    
+    cv = StratifiedShuffleSplit(y=all_y, n_iter=1, test_size=0.4)
+    for train, test in cv:
+        train_x, train_y, test_x, test_y = all_x[train], all_y[train], all_x[test], all_y[test]
+        clf = SVC(C=1, kernel='linear', probability = True, random_state=42)
+        print "Training..."        
+        clf.fit(train_x, train_y)
+        y_test_pre = clf.predict(test_x)
+        
+        print "Confusion matrix..."
+        from sklearn.metrics import accuracy_score
+        from sklearn.metrics import confusion_matrix
+        print "Accuracy:", accuracy_score(test_y, y_test_pre)
+        cm = confusion_matrix(test_y, y_test_pre)
+        np.save('RS_results/RSDataset_%s_%s_%s.npy'%('sift', 1000, 600), cm)
+        from map_confusion import plot_conf
+        plot_conf(conf_arr=cm, label_list=le.classes_.tolist(), 
+                  norm=False, save_name='RS_results/RSDataset_%s_%s_%s.png'%('sift', 1000, 600))
+        
+        from sklearn.metrics import classification_report
+        with file('RS_results/report_spm_%s_%s_%s.txt'%('sift', 1000, 600), 'w') as f:
+            report = classification_report(test_y, y_test_pre, target_names = le.classes_)
+            f.writelines(report)

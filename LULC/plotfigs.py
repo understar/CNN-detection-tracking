@@ -287,10 +287,11 @@ if True:
     for k in le.classes_.tolist():
         corr_all.append(pearsonr(x_entropy[k], y_scores_f1[k])[0])
     plt.figure()
-    width = 0.5
+    width = 0.35
     tick_marks = np.arange(len(le.classes_.tolist()))
     plt.bar(tick_marks, corr_all, width, color='r')
     plt.xticks(tick_marks+width/2, le.classes_.tolist(), rotation=90)
+    plt.axhline(0, color='black', lw=1)
     plt.ylabel('Correlation coefficient')    
     plt.tight_layout()
     plt.ylim(-1,1)

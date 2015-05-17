@@ -6,7 +6,9 @@ Created on Mon May 11 14:44:33 2015
 1、随着样本尺寸整体上的ACC
 2、不同类型的样本随着样本尺寸的指标变化
 3、信息熵计算
-
+4、挖掘本质因素，观察信息熵与各类以及与整体分类情况之间的关系，
+通过投点图，观察，基本上前后都是通过投点图
+from scipy import stats.pearsonr 可以计算变量之间的线性相关程度
 @author: shuaiyi
 """
 import numpy as np
@@ -42,8 +44,8 @@ from scipy.stats import pearsonr
 
 def figit_ent(x, y, k):
     print "[Entropy] Corr. of %s: %s" % (k, pearsonr(x[k], y[k])[0])
-    print "[Entropy] Mean:", mean(x[k])
-    print "[F1] Mean:", mean(y[k])
+    print "[Entropy] Mean:", np.mean(x[k])
+    print "[F1] Mean: %s +- std: %s" % (np.mean(y[k]), np.std(y[k]))
     plt.figure()
     plt.plot(x[k], y[k], 'bo-')
     plt.title(k)
@@ -75,7 +77,7 @@ le = LabelEncoder()
 all_labels = dataset.keys()
 le.fit(all_labels)
 
-# TODO: 计算信息熵,熵可以统一算，下面的CV不行？
+#%% 计算信息熵
 if False:
     clusters = [1000]
     imgsize = [100,150,200,250,300,350,400,450,500,550,600]
@@ -86,7 +88,7 @@ if False:
         print "Processing", k
         for c in clusters:
             for i in imgsize:
-                tmp = 0
+                tmp = []
                 key = "{0}_{1}".format(c, i)
                 if not all_ents.has_key(key):
                     all_ents[key] = {}
@@ -94,8 +96,8 @@ if False:
                     im = Image.open(item).convert('L')
                     if im.size[0] != i:
                         im = im.resize((i, i))
-                    tmp += entropy(im)
-                all_ents[key][k] = tmp/len(v)
+                    tmp.append(entropy(im))
+                all_ents[key][k] = tmp
     
     print "Computing ALL Avg."
     for c in clusters:
@@ -103,11 +105,12 @@ if False:
             tmp = 0
             key = "{0}_{1}".format(c, i)   
             for k,v in dataset.items():
-                tmp += all_ents[key][k]
-            all_ents[key]['all'] = tmp/19
+                tmp += np.sum(all_ents[key][k])
+            all_ents[key]['all'] = tmp/(19*50)
     
     joblib.dump(value=all_ents, filename='RSDataset_entropy.pkl', compress=3)
 
+#%% 计算单个类别的详细分类结果情况
 if False:
     c=args['clusters']
     i=args['imgsize']
@@ -164,6 +167,7 @@ if False:
     joblib.dump(value={"cv":all_results, "LabelEncoder":le}, filename='RSDataset_cv_%s.pkl'%key, compress=3)
     #print("Accuracy-%0.3f : %0.3f (+/- %0.3f)" % (c, scores.mean(), scores.std() * 2))
     
+#%% 相关性分析及绘图
 if True:
     # TODO: 分析各种相关性
     clusters = [1000]
@@ -205,6 +209,7 @@ if True:
     x_entropy_all = []
     y_scores_all = []
     x_entropy = {}
+    x_entropy_std = {}
     y_scores_precision = {}
     y_scores_recall = {}
     y_scores_f1 = {}
@@ -216,7 +221,9 @@ if True:
         for k,v in all_ents[key].items():
             if not x_entropy.has_key(k):
                 x_entropy[k] = []
-            x_entropy[k].append(v)
+                x_entropy_std[k] = []
+            x_entropy[k].append(np.mean(v))
+            x_entropy_std[k].append(np.std(v))
             
         for k,v in all_precision[key].items():
             if not y_scores_precision.has_key(k):
@@ -235,6 +242,7 @@ if True:
             
     x_entropy_all = x_entropy['all']
     x_entropy.pop('all')
+    x_entropy_std.pop('all')
         
     # 感觉熵与精度之间存在线性相关
     fit = pylab.polyfit(x_entropy_all,y_scores_all,1)
@@ -284,25 +292,44 @@ if True:
     
     #相关系数bar图
     corr_all = []
+    f1_std = []
     for k in le.classes_.tolist():
         corr_all.append(pearsonr(x_entropy[k], y_scores_f1[k])[0])
+        f1_std.append(np.std(y_scores_f1[k]))
     plt.figure()
     width = 0.35
     tick_marks = np.arange(len(le.classes_.tolist()))
     plt.bar(tick_marks, corr_all, width, color='r')
-    plt.xticks(tick_marks+width/2, le.classes_.tolist(), rotation=90)
+    plt.bar(tick_marks+width, f1_std, width, color='r')
+    plt.xticks(tick_marks+width, le.classes_.tolist(), rotation=90)
     plt.axhline(0, color='black', lw=1)
     plt.ylabel('Correlation coefficient')    
     plt.tight_layout()
     plt.ylim(-1,1)
     plt.show()
+    
+    # TODO: 通过图示解释熵与分类精度直接的关系
+    # 通过对f1指标方差（方差可以看成分类结果波动是否大的标志），进一步可以阐述为在
+    # 实验熵范围内，分类结果的波动程度，也就是熵对其分类的影响程度，影响较小的情况
+    # 下，此时难以表现出相关（Bridge），甚至出现负相关（Pond footballfield），也有
+    # 可能表现问正相关（？）。可以解释为，当
+    # 前的熵水平对于分类不足（分类精度均值较低），或者已经足够充分（分类精度平均值高）
+    
+    # http://matplotlib.org/users/legend_guide.html
+    # http://matplotlib.org/examples/api/two_scales.html
+    # http://matplotlib.org/api/pyplot_api.html#matplotlib.pyplot.subplot
+    
     # 各类的情况
     # 整体上有大部分是随着熵的增加有增长趋势
     # 是不是10次太少的原因，统计力度不够???
     #for k in x_entropy.keys():
     #    figit_ent(x_entropy, y_scores_f1, k)
     #    #figit_size(x_size, y_scores_f1, k)
-        
+    figit_ent(x_entropy, y_scores_f1, 'Bridge')
+    figit_ent(x_entropy, y_scores_f1, 'Pond')
+    figit_ent(x_entropy, y_scores_f1, 'footballField')
+
+#%% 绘制混淆矩阵
 if False:
     # confusion matrix
     fpath = "{0}_{1}_{2}.pkl".format(args['dataset'][0:-4],args['clusters'], args['imgsize'])

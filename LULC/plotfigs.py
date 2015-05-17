@@ -296,16 +296,27 @@ if True:
     for k in le.classes_.tolist():
         corr_all.append(pearsonr(x_entropy[k], y_scores_f1[k])[0])
         f1_std.append(np.std(y_scores_f1[k]))
-    plt.figure()
-    width = 0.35
-    tick_marks = np.arange(len(le.classes_.tolist()))
-    plt.bar(tick_marks, corr_all, width, color='r')
-    plt.bar(tick_marks+width, f1_std, width, color='r')
+    
+    fig, ax1 = plt.subplots()
     plt.xticks(tick_marks+width, le.classes_.tolist(), rotation=90)
-    plt.axhline(0, color='black', lw=1)
-    plt.ylabel('Correlation coefficient')    
+    width = 0.35 # bar width
+    tick_marks = np.arange(len(le.classes_.tolist()))
+    ax1.bar(tick_marks, corr_all, width, color='r')
+    #ax1.set_xticks(tick_marks+width, le.classes_.tolist(), rotation=90)
+    ax1.axhline(0, color='black', lw=1)
+    ax1.set_ylabel('Correlation coefficient',color='r')
+    ax1.set_ylim(-1,1)
+    for tl in ax1.get_yticklabels():
+        tl.set_color('r')
+    
+    ax2 = ax1.twinx()
+    ax2.bar(tick_marks+width, f1_std, width, color='b') 
+    ax2.set_ylabel('Std. of f1', color='b')
+    ax2.set_ylim(-0.15,0.15)    
+    for tl in ax2.get_yticklabels():
+        tl.set_color('b')
+    
     plt.tight_layout()
-    plt.ylim(-1,1)
     plt.show()
     
     # TODO: 通过图示解释熵与分类精度直接的关系
@@ -325,9 +336,10 @@ if True:
     #for k in x_entropy.keys():
     #    figit_ent(x_entropy, y_scores_f1, k)
     #    #figit_size(x_size, y_scores_f1, k)
-    figit_ent(x_entropy, y_scores_f1, 'Bridge')
-    figit_ent(x_entropy, y_scores_f1, 'Pond')
-    figit_ent(x_entropy, y_scores_f1, 'footballField')
+    
+    #figit_ent(x_entropy, y_scores_f1, 'Bridge')
+    #figit_ent(x_entropy, y_scores_f1, 'Pond')
+    #figit_ent(x_entropy, y_scores_f1, 'footballField')
 
 #%% 绘制混淆矩阵
 if False:

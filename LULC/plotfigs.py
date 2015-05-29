@@ -268,7 +268,7 @@ if True:
     plt.title("Entropy-Acc")
     
     plt.subplot(133)
-    plt.plot(x_size, x_entropy_all,'o-')
+    plt.plot(x_size, x_entropy_all,'o-') #np.log 取对数后有点线性相关的感觉 
              #x_size, func(np.array(x_size), popt[0], popt[1]), '--k')
     plt.title("Size-Entropy") 
     
@@ -298,18 +298,21 @@ if True:
         f1_std.append(np.std(y_scores_f1[k]))
     
     fig, ax1 = plt.subplots()
-    plt.xticks(tick_marks+width, le.classes_.tolist(), rotation=90)
+    
     width = 0.35 # bar width
     tick_marks = np.arange(len(le.classes_.tolist()))
+    plt.xticks(tick_marks+width, le.classes_.tolist(), rotation=90)
+    
+    ax1.axhline(0, color='black', lw=1)
     ax1.bar(tick_marks, corr_all, width, color='r')
     #ax1.set_xticks(tick_marks+width, le.classes_.tolist(), rotation=90)
-    ax1.axhline(0, color='black', lw=1)
     ax1.set_ylabel('Correlation coefficient',color='r')
     ax1.set_ylim(-1,1)
     for tl in ax1.get_yticklabels():
         tl.set_color('r')
     
     ax2 = ax1.twinx()
+    ax2.axhline(0.01, color='blue', lw=1, ls='--')
     ax2.bar(tick_marks+width, f1_std, width, color='b') 
     ax2.set_ylabel('Std. of f1', color='b')
     ax2.set_ylim(-0.15,0.15)    

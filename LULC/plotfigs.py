@@ -48,6 +48,8 @@ def figit_ent(x, y, k):
     print "[F1] Mean: %s +- std: %s" % (np.mean(y[k]), np.std(y[k]))
     plt.figure()
     plt.plot(x[k], y[k], 'bo-')
+    plt.xlabel('Average Entropy')
+    plt.ylabel('F1')
     plt.title(k)
     plt.show()
 
@@ -346,9 +348,11 @@ if True:
     #    figit_ent(x_entropy, y_scores_f1, k)
     #    #figit_size(x_size, y_scores_f1, k)
     
-    #figit_ent(x_entropy, y_scores_f1, 'Bridge')
-    #figit_ent(x_entropy, y_scores_f1, 'Pond')
-    #figit_ent(x_entropy, y_scores_f1, 'footballField')
+    figit_ent(x_entropy, y_scores_f1, 'Beach')
+    figit_ent(x_entropy, y_scores_f1, 'Desert')
+    figit_ent(x_entropy, y_scores_f1, 'Bridge')
+    figit_ent(x_entropy, y_scores_f1, 'Pond')
+    figit_ent(x_entropy, y_scores_f1, 'footballField')
 
 #%% »æÖÆ»ìÏý¾ØÕó
 if False:

@@ -258,19 +258,25 @@ if True:
     
     # 整体上
     plt.figure()
-    plt.subplot(131)
-    plt.plot(x_size, y_scores_all,'o-')
-    plt.title("Size-Acc")
-    
     plt.subplot(132)
-    plt.plot(x_entropy_all, y_scores_all,'o-', 
-             x_entropy_all, fit_fn(x_entropy_all), '--k')
-    plt.title("Entropy-Acc")
+    plt.plot(x_size, y_scores_all,'o-')
+    plt.xlabel('Sample Size')
+    plt.ylabel('Total Accuracy')
+    #plt.title("Size-Acc")
     
     plt.subplot(133)
+    plt.plot(x_entropy_all, y_scores_all,'o-', 
+             x_entropy_all, fit_fn(x_entropy_all), '--k')
+    plt.xlabel('Average Entropy')
+    plt.ylabel('Total Accuracy')    
+    #plt.title("Entropy-Acc")
+    
+    plt.subplot(131)
     plt.plot(x_size, x_entropy_all,'o-') #np.log 取对数后有点线性相关的感觉 
              #x_size, func(np.array(x_size), popt[0], popt[1]), '--k')
-    plt.title("Size-Entropy") 
+    #plt.title("Size-Entropy") 
+    plt.xlabel('Sample Size')
+    plt.ylabel('Average Entropy')
     
     plt.tight_layout()
     plt.show()
@@ -314,7 +320,7 @@ if True:
     ax2 = ax1.twinx()
     ax2.axhline(0.01, color='blue', lw=1, ls='--')
     ax2.bar(tick_marks+width, f1_std, width, color='b') 
-    ax2.set_ylabel('Std. of f1', color='b')
+    ax2.set_ylabel('Std. of F1', color='b')
     ax2.set_ylim(-0.15,0.15)    
     for tl in ax2.get_yticklabels():
         tl.set_color('b')
